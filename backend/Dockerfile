@@ -11,7 +11,7 @@ RUN cargo new --bin backend
 WORKDIR /usr/src/app/backend
 
 # Copy manifests
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
 
 # Build dependencies only (caching step)
 RUN cargo build --release
