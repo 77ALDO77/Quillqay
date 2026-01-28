@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: qillqay-backend
-          image: qillqay:latest
+          image: ghcr.io/77aldo77/quillqay:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
