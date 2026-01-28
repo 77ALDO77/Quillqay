@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: qillqay-backend
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   selector:
     app: qillqay-backend
   ports:
