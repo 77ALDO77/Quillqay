@@ -1,71 +1,108 @@
 use axum::{
-    extract::{ws::{Message, WebSocket, WebSocketUpgrade}, State},
+    extract::{ws::{Message, WebSocket, WebSocketUpgrade}, State, Path},
     response::IntoResponse,
     Json,
+    http::StatusCode,
 };
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use futures::{sink::SinkExt, stream::StreamExt};
 use uuid::Uuid;
+use serde::Deserialize;
 use serde_json::json;
 
 use crate::AppState;
 use crate::infrastructure::persistence::postgres::PostgresRepository;
-use crate::domain::entities::{Page, Block, BlockData};
+use crate::domain::entities::{Block, Page};
 
 pub async fn health_check() -> &'static str {
     "OK"
 }
 
-// Handler using the repository
-pub async fn get_pages_demo(
-    State(state): State<Arc<AppState>>,
-) -> Json<serde_json::Value> {
-    let repo = PostgresRepository::new(state.pool.clone());
-    
-    // For demo purposes, we will try to fetch a specific page or create some data if empty
-    // Ideally we would take a page_id as parameter.
-    // Here we just replicate the previous mock behavior but "prepared" to use DB.
-    
-    let page_id = Uuid::new_v4();
-    
-    // In a real scenario:
-    // let page = repo.get_page(page_id).await.unwrap();
-    // let blocks = repo.get_blocks_for_page(page_id).await.unwrap();
+// --- Pages CRUD ---
 
-    let demo_page = Page {
-        id: page_id,
-        title: "My First Note (Refactored)".to_string(),
-        parent_id: None,
-    };
-
-    let demo_block = Block {
-        id: Uuid::new_v4(),
-        page_id,
-        data: BlockData::Header { 
-            level: 1, 
-            text: "Welcome to Quillqay (Refactored)".to_string() 
-        },
-    };
-
-    let demo_todo = Block {
-        id: Uuid::new_v4(),
-        page_id,
-        data: BlockData::Todo { 
-            task: "Implement frontend".to_string(), 
-            completed: false 
-        },
-    };
-
-    Json(json!({
-        "data": {
-            "page": demo_page,
-            "blocks": [demo_block, demo_todo]
-        }
-    }))
+#[derive(Deserialize)]
+pub struct CreatePageRequest {
+    title: String,
 }
 
-// WebSocket Handler
+pub async fn create_page_handler(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<CreatePageRequest>,
+) -> Result<Json<Page>, StatusCode> {
+    let repo = PostgresRepository::new(state.pool.clone());
+    
+    match repo.create_page(payload.title).await {
+        Ok(page) => Ok(Json(page)),
+        Err(e) => {
+            tracing::error!("Failed to create page: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+pub async fn get_all_pages_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Vec<Page>>, StatusCode> {
+    let repo = PostgresRepository::new(state.pool.clone());
+    
+    match repo.get_all_pages().await {
+        Ok(pages) => Ok(Json(pages)),
+        Err(e) => {
+            tracing::error!("Failed to fetch pages: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+pub async fn get_page_handler(
+    Path(id): Path<Uuid>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let repo = PostgresRepository::new(state.pool.clone());
+    
+    let page = repo.get_page(id).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    if let Some(page) = page {
+        let blocks = repo.get_blocks_for_page(id).await.unwrap_or(vec![]);
+        
+        // Return combined structure expected by frontend (Page interface)
+        // Frontend expects: { id, title, blocks: [] }
+        Ok(Json(json!({
+            "id": page.id,
+            "title": page.title,
+            "parent_id": page.parent_id,
+            "blocks": blocks
+        })))
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
+
+#[derive(Deserialize)]
+pub struct UpdatePageRequest {
+    title: String,
+    blocks: Vec<Block>,
+}
+
+pub async fn update_page_handler(
+    Path(id): Path<Uuid>,
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<UpdatePageRequest>,
+) -> Result<StatusCode, StatusCode> {
+    let repo = PostgresRepository::new(state.pool.clone());
+    
+    match repo.save_page_content(id, payload.title, payload.blocks).await {
+        Ok(_) => Ok(StatusCode::OK),
+        Err(e) => {
+            tracing::error!("Failed to update page: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+// --- WebSocket ---
+
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<Arc<AppState>>,
@@ -73,14 +110,10 @@ pub async fn ws_handler(
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
 
-// Handle individual websocket connection
 async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     let (mut sender, mut receiver) = socket.split();
-    
-    // Subscribe to the broadcast channel
     let mut rx = state.tx.subscribe();
 
-    // Spawn a task to forward broadcast messages to this client
     let mut send_task = tokio::spawn(async move {
         while let Ok(msg) = rx.recv().await {
             if sender.send(Message::Text(msg)).await.is_err() {
@@ -89,7 +122,6 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
         }
     });
 
-    // Handle incoming messages
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             tracing::debug!("Received message: {:?}", msg);

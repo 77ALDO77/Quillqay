@@ -1,22 +1,16 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(tag = "type", content = "data")]
-pub enum BlockData {
-    Text(String),
-    Header { level: u8, text: String },
-    Code { lang: String, code: String },
-    Todo { task: String, completed: bool },
-}
-
+// EditorJS Block Structure
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Block {
-    pub id: Uuid,
-    pub page_id: Uuid,
-    pub data: BlockData,
+    pub id: String, // EditorJS IDs are strings
+    #[serde(rename = "type")]
+    pub block_type: String,
+    pub data: serde_json::Value,
 }
 
+// Page Entity
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Page {
     pub id: Uuid,

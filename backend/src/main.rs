@@ -13,7 +13,9 @@ use tokio::sync::broadcast;
 mod domain;
 mod infrastructure;
 
-use infrastructure::web::handlers::{health_check, get_pages_demo, ws_handler};
+use infrastructure::web::handlers::{
+    health_check, ws_handler, create_page_handler, get_all_pages_handler, get_page_handler, update_page_handler
+};
 
 // State shared across the application
 pub struct AppState {
@@ -52,7 +54,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Router
     let app = Router::new()
         .route("/health", get(health_check))
-        .route("/api/v1/pages", get(get_pages_demo))
+        .route("/api/v1/pages", get(get_all_pages_handler).post(create_page_handler))
+        .route("/api/v1/pages/:id", get(get_page_handler).put(update_page_handler))
         .route("/ws", get(ws_handler))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
