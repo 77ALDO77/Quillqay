@@ -1,5 +1,5 @@
 # Builder stage
-FROM rust:1.80-slim-bookworm as builder
+FROM rust:slim-bookworm as builder
 
 WORKDIR /usr/src/app
 
@@ -11,7 +11,7 @@ RUN cargo new --bin backend
 WORKDIR /usr/src/app/backend
 
 # Copy manifests
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
 
 # Build dependencies only (caching step)
 RUN cargo build --release
