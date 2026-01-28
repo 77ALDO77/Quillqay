@@ -1,16 +1,25 @@
 use axum::{
     routing::get,
-    Json, Router,
+    Router,
 };
 use sqlx::postgres::PgPoolOptions;
+use sqlx::PgPool;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use serde_json::json;
-use uuid::Uuid;
+use std::sync::Arc;
+use tokio::sync::broadcast;
 
-mod models;
-use models::{Page, Block, BlockData};
+mod domain;
+mod infrastructure;
+
+use infrastructure::web::handlers::{health_check, get_pages_demo, ws_handler};
+
+// State shared across the application
+pub struct AppState {
+    pub pool: PgPool,
+    pub tx: broadcast::Sender<String>,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -35,13 +44,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .expect("Failed to connect to database");
 
+    // Initialize Broadcast Channel
+    let (tx, _rx) = broadcast::channel(100);
+
+    let app_state = Arc::new(AppState { pool, tx });
+
     // Router
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/api/v1/pages", get(get_pages_demo))
+        .route("/ws", get(ws_handler))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
-        .with_state(pool);
+        .with_state(app_state);
 
     // Start Server
     let addr = "0.0.0.0:3000";
@@ -50,44 +65,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     axum::serve(listener, app).await?;
 
     Ok(())
-}
-
-async fn health_check() -> &'static str {
-    "OK"
-}
-
-// Mock handler returning the structure as defined in Task 1
-async fn get_pages_demo() -> Json<serde_json::Value> {
-    let page_id = Uuid::new_v4();
-    
-    let demo_page = Page {
-        id: page_id,
-        title: "My First Note".to_string(),
-        parent_id: None,
-    };
-
-    let demo_block = Block {
-        id: Uuid::new_v4(),
-        page_id,
-        data: BlockData::Header { 
-            level: 1, 
-            text: "Welcome to Quillqay".to_string() 
-        },
-    };
-
-    let demo_todo = Block {
-        id: Uuid::new_v4(),
-        page_id,
-        data: BlockData::Todo { 
-            task: "Implement frontend".to_string(), 
-            completed: false 
-        },
-    };
-
-    Json(json!({
-        "data": {
-            "page": demo_page,
-            "blocks": [demo_block, demo_todo]
-        }
-    }))
 }

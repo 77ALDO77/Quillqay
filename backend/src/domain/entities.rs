@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use sqlx::FromRow;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(tag = "type", content = "data")] // Making it easier to consume: { "type": "Text", "data": "..." }
+#[serde(tag = "type", content = "data")]
 pub enum BlockData {
     Text(String),
     Header { level: u8, text: String },
@@ -11,15 +10,14 @@ pub enum BlockData {
     Todo { task: String, completed: bool },
 }
 
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Block {
     pub id: Uuid,
     pub page_id: Uuid,
-    #[sqlx(json)]
     pub data: BlockData,
 }
 
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Page {
     pub id: Uuid,
     pub title: String,
