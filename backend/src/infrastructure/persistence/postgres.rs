@@ -1,13 +1,8 @@
-use crate::domain::entities::{Block, BlockData, Page};
+use crate::domain::entities::{Block, Page};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 use serde_json::Value;
 
-// DTOs for Database Mapping to keep Domain entities pure if strict separation is needed,
-// but for now since our entities are simple and sqlx can map to them with some help or direct DTOs,
-// we will use the previously defined struct shape but handle the JSONB mapping manually or via sqlx help.
-
-// We will implement a simple Repository struct
 pub struct PostgresRepository {
     pool: PgPool,
 }
@@ -26,7 +21,7 @@ impl PostgresRepository {
         }
 
         let row = sqlx::query_as::<_, PageRow>(
-            r#"SELECT id, title, parent_id FROM pages WHERE id = $1"#
+            "SELECT id, title, parent_id FROM pages WHERE id = $1"
         )
         .bind(page_id)
         .fetch_optional(&self.pool)
@@ -38,61 +33,107 @@ impl PostgresRepository {
             parent_id: r.parent_id,
         }))
     }
+    
+    // ... (rest of the file remains, skipping to get_all_pages)
 
-    pub async fn create_page(&self, page: &Page) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            r#"INSERT INTO pages (id, title, parent_id) VALUES ($1, $2, $3)"#
-        )
-        .bind(page.id)
-        .bind(&page.title)
-        .bind(page.parent_id)
-        .execute(&self.pool)
-        .await?;
-        Ok(())
-    }
+    // You must manually locate get_all_pages since replace_file_content needs exact context.
+    // I will split this into two replacements if needed, but I can probably put the struct definition at module level?
+    // No, local structs are fine.
+    
+    // Wait, replace_file_content works on chunks. I need to replace get_page AND get_all_pages.
+    // I already have get_blocks_for_page implemented correctly with manual mapping.
+
+    // Let's replace get_page first.
+
 
     pub async fn get_blocks_for_page(&self, page_id: Uuid) -> Result<Vec<Block>, sqlx::Error> {
-        // We need to retrieve the JSONB data and map it to BlockData enum
-        // sqlx::query_as! has trouble with complex types without type overrides, 
-        // so we use query_as and a custom DTO or manual mapping.
-        // Let's use a DTO for the DB row.
-        
         #[derive(FromRow)]
         struct BlockRow {
-            id: Uuid,
-            page_id: Uuid,
-            data: Value, // serde_json::Value
+            id: String,
+            data: Value,
         }
 
         let rows = sqlx::query_as::<_, BlockRow>(
-            r#"SELECT id, page_id, data FROM blocks WHERE page_id = $1"#
+            "SELECT id, data FROM blocks WHERE page_id = $1"
         )
         .bind(page_id)
         .fetch_all(&self.pool)
         .await?;
 
         let blocks = rows.into_iter().map(|row| {
-            let block_data: BlockData = serde_json::from_value(row.data).unwrap_or_else(|_| BlockData::Text("Error parsing block data".to_string()));
+            let val = &row.data;
+            let block_type = val.get("type").and_then(|t| t.as_str()).unwrap_or("paragraph").to_string();
+            let inner_data = val.get("data").cloned().unwrap_or(Value::Null);
+
             Block {
                 id: row.id,
-                page_id: row.page_id,
-                data: block_data,
+                block_type,
+                data: inner_data
             }
         }).collect();
 
         Ok(blocks)
     }
 
-    pub async fn create_block(&self, block: &Block) -> Result<(), sqlx::Error> {
-        let data_json = serde_json::to_value(&block.data).unwrap();
-        sqlx::query(
-            r#"INSERT INTO blocks (id, page_id, data) VALUES ($1, $2, $3)"#
-        )
-        .bind(block.id)
-        .bind(block.page_id)
-        .bind(data_json)
-        .execute(&self.pool)
-        .await?;
+    pub async fn save_page_content(&self, page_id: Uuid, title: String, blocks: Vec<Block>) -> Result<(), sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query("UPDATE pages SET title = $1 WHERE id = $2")
+            .bind(&title)
+            .bind(page_id)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query("DELETE FROM blocks WHERE page_id = $1")
+            .bind(page_id)
+            .execute(&mut *tx)
+            .await?;
+
+        for block in blocks {
+            let combined_data = serde_json::json!({
+                "type": block.block_type,
+                "data": block.data
+            });
+
+            sqlx::query("INSERT INTO blocks (id, page_id, data) VALUES ($1, $2, $3)")
+                .bind(block.id)
+                .bind(page_id)
+                .bind(combined_data)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        tx.commit().await?;
         Ok(())
+    }
+
+    pub async fn create_page(&self, title: String) -> Result<Page, sqlx::Error> {
+        let id = Uuid::new_v4();
+        sqlx::query("INSERT INTO pages (id, title) VALUES ($1, $2)")
+            .bind(id)
+            .bind(&title)
+            .execute(&self.pool)
+            .await?;
+            
+        Ok(Page { id, title, parent_id: None })
+    }
+    
+    pub async fn get_all_pages(&self) -> Result<Vec<Page>, sqlx::Error> {
+        #[derive(FromRow)]
+        struct PageRow {
+            id: Uuid,
+            title: String,
+            parent_id: Option<Uuid>,
+        }
+
+        let rows = sqlx::query_as::<_, PageRow>("SELECT id, title, parent_id FROM pages")
+            .fetch_all(&self.pool)
+            .await?;
+            
+        Ok(rows.into_iter().map(|r| Page {
+            id: r.id,
+            title: r.title,
+            parent_id: r.parent_id,
+        }).collect())
     }
 }
