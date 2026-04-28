@@ -21,83 +21,62 @@ export default function DocumentEditorPage() {
   const docId = params.docId as string;
 
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
-  const [blocks, setBlocks] = useState<any[]>([]);
   const [title, setTitle] = useState('Untitled Document');
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleSave = useCallback(
-    (newBlocks: any[]) => {
-      setBlocks(newBlocks);
+    (_blocks: any[]) => {
       setSaveStatus('saving');
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => {
-        setSaveStatus('saved');
-      }, 1000);
+      saveTimeoutRef.current = setTimeout(() => setSaveStatus('saved'), 1000);
     },
     []
   );
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#1c1b1d_0%,#131315_100%)] text-on-surface font-display">
-      {/* Background */}
-      <div className="fixed top-[-10%] left-[15%] w-[40vw] h-[40vw] bg-primary/5 rounded-full blur-[120px] pointer-events-none z-0" />
-
-      {/* TopNavBar */}
-      <header className="sticky top-0 z-50 flex justify-between items-center px-4 md:px-6 py-3 bg-surface/60 backdrop-blur-lg rounded-xl mt-4 mx-4 border border-white/10 shadow-[0_0_15px_rgba(157,92,255,0.1)]">
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/projects/${projectId}/documents`}
-            className="p-1.5 rounded-lg hover:bg-white/5 transition-colors text-on-surface-variant"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <span className="text-xs text-on-surface-variant/50">Documents</span>
-          </div>
-        </div>
-
-        {/* Save Status */}
-        <div className="flex items-center gap-2 text-sm">
+    <div className="space-y-6">
+      {/* Back link + save status */}
+      <div className="flex items-center justify-between">
+        <Link
+          href={`/projects/${projectId}/documents`}
+          className="flex items-center gap-2 text-xs text-on-surface-variant/50 hover:text-on-surface-variant transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to documents
+        </Link>
+        <div className="flex items-center gap-2 text-xs">
           {saveStatus === 'saving' && (
-            <span className="flex items-center gap-1.5 text-on-surface-variant text-xs">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+            <span className="flex items-center gap-1 text-on-surface-variant">
+              <Loader2 className="w-3 h-3 animate-spin text-primary" />
               Saving...
             </span>
           )}
           {saveStatus === 'saved' && (
-            <span className="flex items-center gap-1.5 text-on-surface-variant text-xs">
-              <CheckCircle className="w-3.5 h-3.5 text-secondary" />
+            <span className="flex items-center gap-1 text-on-surface-variant">
+              <CheckCircle className="w-3 h-3 text-secondary" />
               Saved
             </span>
           )}
           {saveStatus === 'error' && (
-            <span className="flex items-center gap-1.5 text-error text-xs">
-              <AlertCircle className="w-3.5 h-3.5" />
+            <span className="flex items-center gap-1 text-error">
+              <AlertCircle className="w-3 h-3" />
               Error
             </span>
           )}
         </div>
-      </header>
+      </div>
 
-      {/* Editor */}
-      <main className="max-w-4xl mx-auto p-4 md:p-6">
-        <div className="glass-panel rounded-3xl border border-white/10 shadow-2xl p-6 md:p-8">
-          {/* Title Input */}
-          <input
-            type="text"
-            defaultValue={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-transparent text-2xl md:text-3xl font-bold tracking-tighter text-on-surface placeholder:text-outline/40 focus:outline-none border-b-2 border-transparent focus:border-primary transition-colors pb-2 mb-6"
-            placeholder="Document Title"
-          />
-
-          {/* Editor */}
-          <BlockEditor
-            initialData={[]}
-            onChange={handleSave}
-          />
-        </div>
-      </main>
+      {/* Editor Card */}
+      <div className="glass-panel rounded-2xl border border-white/10 p-6 md:p-8 shadow-xl">
+        <input
+          type="text"
+          defaultValue={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full bg-transparent text-2xl md:text-3xl font-bold tracking-tighter text-on-surface placeholder:text-outline/40 focus:outline-none border-b-2 border-transparent focus:border-primary transition-colors pb-2 mb-6"
+          placeholder="Document Title"
+        />
+        <BlockEditor initialData={[]} onChange={handleSave} />
+      </div>
     </div>
   );
 }

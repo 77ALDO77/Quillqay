@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   icons: {
     apple: "/icon-192x192.png",
   },
+  other: {
+    "view-transition": "same-origin",
+  },
 };
 
 export const viewport: Viewport = {
