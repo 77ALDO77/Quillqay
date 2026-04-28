@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef, useCallback } from 'react';
-import EditorJS, { OutputData } from '@editorjs/editorjs';
-// Plugins lack official types mostly, requiring @ts-ignore or custom declarations
+import React, { useEffect, useRef } from 'react';
+import EditorJS from '@editorjs/editorjs';
 // @ts-ignore
 import Header from '@editorjs/header';
 // @ts-ignore
@@ -15,78 +14,79 @@ import Code from '@editorjs/code';
 import { Block } from '@/lib/api';
 
 interface BlockEditorProps {
-    initialData?: Block[];
-    onChange?: (blocks: Block[]) => void;
-    holderId?: string;
-    readOnly?: boolean;
+  initialData?: Block[];
+  onChange?: (blocks: Block[]) => void;
+  holderId?: string;
+  readOnly?: boolean;
 }
 
 const BlockEditor: React.FC<BlockEditorProps> = ({
-    initialData,
-    onChange,
-    holderId = 'editorjs',
-    readOnly = false
+  initialData,
+  onChange,
+  holderId = 'editorjs',
+  readOnly = false,
 }) => {
-    const ref = useRef<EditorJS | null>(null);
+  const ref = useRef<EditorJS | null>(null);
 
-    // @ts-ignore - Editor.js tools lack proper types
-    const tools: any = {
-        header: {
-            class: Header,
-            config: {
-                placeholder: 'Enter a header',
-                levels: [1, 2, 3],
-                defaultLevel: 2
-            }
+  // @ts-ignore
+  const tools: any = {
+    header: {
+      class: Header,
+      config: {
+        placeholder: 'Enter a header',
+        levels: [1, 2, 3],
+        defaultLevel: 2,
+      },
+    },
+    list: {
+      class: List,
+      inlineToolbar: true,
+    },
+    checklistTool: {
+      class: Checklist,
+      inlineToolbar: true,
+    },
+    code: Code,
+  };
+
+  useEffect(() => {
+    if (!ref.current) {
+      const editor = new EditorJS({
+        holder: holderId,
+        readOnly,
+        placeholder: 'Start writing your amazing notes...',
+        tools,
+        data: {
+          time: Date.now(),
+          version: '2.30',
+          blocks: initialData || [],
         },
-        list: {
-            class: List,
-            inlineToolbar: true,
+        onChange: async () => {
+          if (onChange) {
+            const content = await editor.save();
+            onChange(content.blocks as any);
+          }
         },
-        checklistTool: {
-            class: Checklist,
-            inlineToolbar: true,
-        },
-        code: Code,
+      });
+      ref.current = editor;
+    }
+
+    return () => {
+      if (ref.current && ref.current.destroy) {
+        ref.current.destroy();
+        ref.current = null;
+      }
     };
+  }, []);
 
-    // Initialize Editor
-    useEffect(() => {
-        if (!ref.current) {
-            const editor = new EditorJS({
-                holder: holderId,
-                readOnly,
-                placeholder: 'Start writing your amazing notes...',
-                tools,
-                data: {
-                    time: Date.now(),
-                    version: '2.30',
-                    blocks: initialData || []
-                },
-                onChange: async (api, event) => {
-                    if (onChange) {
-                        const content = await api.saver.save();
-                        // Cast EditorJS blocks to our Block interface
-                        onChange(content.blocks as any);
-                    }
-                },
-            });
-            ref.current = editor;
-        }
-
-        return () => {
-            if (ref.current && ref.current.destroy) {
-                ref.current.destroy();
-                ref.current = null;
-            }
-        };
-    }, []); // Run once on mount
-
-    return (
-        <div className="prose prose-invert max-w-none w-full">
-            <div id={holderId} className="min-h-[500px] bg-gray-900/50 rounded-xl p-8 border border-gray-800" />
-        </div>
-    );
+  return (
+    <div className="prose prose-invert max-w-none w-full">
+      <div
+        id={holderId}
+        className="min-h-[500px] bg-surface-container-lowest rounded-2xl p-6 md:p-8 border border-white/10"
+      />
+    </div>
+  );
 };
 
 export default BlockEditor;
