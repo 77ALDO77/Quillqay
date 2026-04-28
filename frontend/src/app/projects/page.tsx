@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import ViewTransitionLink from '@/components/ViewTransitionLink';
 import {
   Terminal, Bell, Search, LogOut,
   Plus, Clock, ArrowRight, Trash2, X, FileText,
@@ -226,13 +227,13 @@ export default function ProjectsPage() {
                       {project.updatedAt}
                     </span>
                   </div>
-                  <Link
+                  <ViewTransitionLink
                     href={`/projects/${project.id}/notes`}
                     className={`flex items-center gap-1 text-xs font-bold text-${project.color} hover:underline`}
                   >
                     Open
                     <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
+                  </ViewTransitionLink>
                 </div>
               </div>
             ))}
