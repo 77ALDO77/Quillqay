@@ -10,11 +10,12 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    turbopack: {},
     async rewrites() {
         return [
             {
                 source: '/api/:path*',
-                destination: 'http://10.106.101.249/api/:path*', // Proxy to Backend LoadBalancer IP
+                destination: 'http://127.0.0.1:8080/api/:path*', // Proxy to Backend Local Port-forward
             },
         ];
     },

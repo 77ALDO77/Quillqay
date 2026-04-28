@@ -1,4 +1,7 @@
 use crate::domain::entities::{Block, Page};
+use crate::domain::errors::DomainError;
+use crate::domain::repositories::PageRepository;
+use async_trait::async_trait;
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 use serde_json::Value;
@@ -11,8 +14,11 @@ impl PostgresRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
+}
 
-    pub async fn get_page(&self, page_id: Uuid) -> Result<Option<Page>, sqlx::Error> {
+#[async_trait]
+impl PageRepository for PostgresRepository {
+    async fn get_page(&self, page_id: Uuid) -> Result<Option<Page>, DomainError> {
         #[derive(FromRow)]
         struct PageRow {
             id: Uuid,
@@ -33,20 +39,8 @@ impl PostgresRepository {
             parent_id: r.parent_id,
         }))
     }
-    
-    // ... (rest of the file remains, skipping to get_all_pages)
 
-    // You must manually locate get_all_pages since replace_file_content needs exact context.
-    // I will split this into two replacements if needed, but I can probably put the struct definition at module level?
-    // No, local structs are fine.
-    
-    // Wait, replace_file_content works on chunks. I need to replace get_page AND get_all_pages.
-    // I already have get_blocks_for_page implemented correctly with manual mapping.
-
-    // Let's replace get_page first.
-
-
-    pub async fn get_blocks_for_page(&self, page_id: Uuid) -> Result<Vec<Block>, sqlx::Error> {
+    async fn get_blocks_for_page(&self, page_id: Uuid) -> Result<Vec<Block>, DomainError> {
         #[derive(FromRow)]
         struct BlockRow {
             id: String,
@@ -75,7 +69,7 @@ impl PostgresRepository {
         Ok(blocks)
     }
 
-    pub async fn save_page_content(&self, page_id: Uuid, title: String, blocks: Vec<Block>) -> Result<(), sqlx::Error> {
+    async fn save_page_content(&self, page_id: Uuid, title: String, blocks: Vec<Block>) -> Result<(), DomainError> {
         let mut tx = self.pool.begin().await?;
 
         sqlx::query("UPDATE pages SET title = $1 WHERE id = $2")
@@ -107,7 +101,7 @@ impl PostgresRepository {
         Ok(())
     }
 
-    pub async fn create_page(&self, title: String) -> Result<Page, sqlx::Error> {
+    async fn create_page(&self, title: String) -> Result<Page, DomainError> {
         let id = Uuid::new_v4();
         sqlx::query("INSERT INTO pages (id, title) VALUES ($1, $2)")
             .bind(id)
@@ -118,7 +112,7 @@ impl PostgresRepository {
         Ok(Page { id, title, parent_id: None })
     }
     
-    pub async fn get_all_pages(&self) -> Result<Vec<Page>, sqlx::Error> {
+    async fn get_all_pages(&self) -> Result<Vec<Page>, DomainError> {
         #[derive(FromRow)]
         struct PageRow {
             id: Uuid,
@@ -135,5 +129,13 @@ impl PostgresRepository {
             title: r.title,
             parent_id: r.parent_id,
         }).collect())
+    }
+
+    async fn delete_page(&self, id: Uuid) -> Result<(), DomainError> {
+        sqlx::query("DELETE FROM pages WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
     }
 }

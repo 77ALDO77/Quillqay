@@ -1,7 +1,4 @@
 
-import axios from 'axios'; // Using axios might be easier for config, but sticking to fetch as requested initially or switching if user prefers. 
-// User asked for fetch in previous turn, but let's stick to the prompt requirements. I'll use fetch.
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 export interface EditorJsData {

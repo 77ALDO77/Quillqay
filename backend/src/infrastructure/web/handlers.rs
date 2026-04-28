@@ -14,6 +14,7 @@ use serde_json::json;
 use crate::AppState;
 use crate::infrastructure::persistence::postgres::PostgresRepository;
 use crate::domain::entities::{Block, Page};
+use crate::domain::repositories::PageRepository;
 
 pub async fn health_check() -> &'static str {
     "OK"
