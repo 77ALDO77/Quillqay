@@ -33,8 +33,10 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
       <div className="fixed top-[-10%] left-[10%] w-[40vw] h-[40vw] bg-primary/5 rounded-full blur-[120px] pointer-events-none z-0" />
       <div className="fixed bottom-[-10%] right-[-5%] w-[30vw] h-[30vw] bg-secondary/3 rounded-full blur-[100px] pointer-events-none z-0" />
 
-      {/* ============ FULL-WIDTH NAVBAR ============ */}
-      <header className="sticky top-0 z-50 flex justify-between items-center px-4 md:px-6 py-3 bg-surface/70 backdrop-blur-xl border-b border-white/[0.08] shadow-[0_1px_0_rgba(255,255,255,0.03)]">
+      {/* ============ FLOATING NAVBAR ============ */}
+      <header className="sticky top-0 z-50 relative flex justify-between items-center px-4 md:px-6 py-3 mt-4 mx-4 rounded-2xl border border-white/[0.12] backdrop-blur-2xl shadow-[0_24px_50px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.04)_inset]" style={{ background: 'linear-gradient(135deg, rgba(28,27,29,0.9) 0%, rgba(20,20,22,0.95) 100%)' }}>
+        {/* Under-glow for navbar */}
+        <div className="absolute -inset-4 bg-primary/[0.04] rounded-[20px] blur-2xl pointer-events-none -z-10" />
         {/* Left side */}
         <div className="flex items-center gap-3">
           <Link
@@ -73,7 +75,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
       <aside
         className={`
           fixed z-40
-          top-[72px] bottom-4 left-4
+          top-[76px] bottom-4 left-4
           w-[240px] lg:w-[260px]
           flex flex-col
           rounded-3xl
@@ -146,8 +148,8 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* ============ CONTENT AREA (pushed by sidebar, no navbar) ============ */}
-      <div className="ml-0 lg:ml-[276px] md:ml-[256px] min-h-[calc(100vh-56px)] mt-[56px] flex flex-col">
-        <main className="flex-1 p-4 md:p-6">
+      <div className="ml-0 lg:ml-[276px] md:ml-[256px] min-h-[calc(100vh-60px)] flex flex-col">
+        <main className="flex-1 p-4 md:p-6 pb-4">
           {children}
         </main>
       </div>
