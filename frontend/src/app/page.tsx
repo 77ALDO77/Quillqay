@@ -130,7 +130,7 @@ export default function LandingPage() {
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
-            href="/notes"
+            href="/projects"
             className="group flex items-center gap-2 px-8 py-3.5 rounded-xl bg-primary text-on-primary font-bold text-sm shadow-lg shadow-primary/30 hover:saturate-150 hover:scale-105 transition-all duration-300"
           >
             Start Writing
@@ -224,7 +224,7 @@ export default function LandingPage() {
               Your thoughts deserve a beautiful home.
             </p>
             <Link
-              href="/notes"
+              href="/projects"
               className="group inline-flex items-center gap-2 px-10 py-4 rounded-xl bg-primary text-on-primary font-bold text-sm shadow-lg shadow-primary/30 hover:saturate-150 hover:scale-105 transition-all duration-300"
             >
               Enter Quillqay
