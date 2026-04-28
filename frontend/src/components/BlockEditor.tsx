@@ -29,6 +29,27 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
 }) => {
     const ref = useRef<EditorJS | null>(null);
 
+    // @ts-ignore - Editor.js tools lack proper types
+    const tools: any = {
+        header: {
+            class: Header,
+            config: {
+                placeholder: 'Enter a header',
+                levels: [1, 2, 3],
+                defaultLevel: 2
+            }
+        },
+        list: {
+            class: List,
+            inlineToolbar: true,
+        },
+        checklistTool: {
+            class: Checklist,
+            inlineToolbar: true,
+        },
+        code: Code,
+    };
+
     // Initialize Editor
     useEffect(() => {
         if (!ref.current) {
@@ -36,25 +57,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                 holder: holderId,
                 readOnly,
                 placeholder: 'Start writing your amazing notes...',
-                tools: {
-                    header: {
-                        class: Header,
-                        config: {
-                            placeholder: 'Enter a header',
-                            levels: [1, 2, 3],
-                            defaultLevel: 2
-                        }
-                    },
-                    list: {
-                        class: List,
-                        inlineToolbar: true,
-                    },
-                    checklistTool: {
-                        class: Checklist,
-                        inlineToolbar: true,
-                    },
-                    code: Code,
-                },
+                tools,
                 data: {
                     time: Date.now(),
                     version: '2.30',

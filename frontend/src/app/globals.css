@@ -8,13 +8,45 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter), Arial, Helvetica, sans-serif;
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-space-grotesk), Arial, Helvetica, sans-serif;
+  --color-primary: #d6baff;
+  --color-primary-container: #aa73ff;
+  --color-secondary: #d3fbff;
+  --color-secondary-container: #00eefc;
+  --color-tertiary: #ffb0cb;
+  --color-tertiary-container: #ff479c;
+  --color-surface: #131315;
+  --color-surface-dim: #131315;
+  --color-surface-bright: #39393b;
+  --color-surface-container: #201f21;
+  --color-surface-container-low: #1c1b1d;
+  --color-surface-container-lowest: #0e0e10;
+  --color-surface-container-high: #2a2a2c;
+  --color-surface-container-highest: #353437;
+  --color-surface-variant: #353437;
+  --color-surface-tint: #d6baff;
+  --color-on-surface: #e5e1e4;
+  --color-on-surface-variant: #cdc2d7;
+  --color-on-primary: #420089;
+  --color-on-primary-container: #3a0079;
+  --color-on-secondary: #00363a;
+  --color-on-secondary-container: #00686f;
+  --color-on-tertiary: #640036;
+  --color-on-tertiary-container: #58002f;
+  --color-outline: #968da0;
+  --color-outline-variant: #4b4454;
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-inverse-surface: #e5e1e4;
+  --color-inverse-on-surface: #313032;
+  --color-inverse-primary: #7832d9;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #000000; /* Deep black for premium feel */
+    --background: #000000;
     --foreground: #ededed;
   }
 }
@@ -22,7 +54,31 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.02);
+}
+
+.glow-accent {
+  filter: drop-shadow(0 0 8px rgba(214, 186, 255, 0.4));
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(214, 186, 255, 0.2);
+  border-radius: 10px;
 }
 
 /* EditorJS Custom Styles to fix Tailwind Reset conflicts */
