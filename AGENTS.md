@@ -7,27 +7,35 @@
 cd frontend && bun run dev
 ```
 
-**Backend** (Rust/Axum on port 3000):
+**Backend** (C# / ASP.NET):
 ```bash
-cd backend && cargo run
+# TODO: document backend run command
 ```
 
-> **Port mismatch**: `next.config.mjs` proxies `/api` to port 8080, but `main.rs` binds `0.0.0.0:3000`. If you get 502 errors, align them: either run backend on 8080 or update the rewrite.
+**Env vars**:
+- Frontend: `NEXT_PUBLIC_API_URL` (defaults to `/api/v1`)
 
 ## Stack
 
-- **Frontend**: Next.js 16 + React 19 + Tailwind CSS 4 + Editor.js + TanStack Query + lucide-react
-- **Backend**: Rust (Axum 0.7, SQLx 0.7, PostgreSQL)
-- **Icons**: lucide-react v0.563 (no Google Material Icons, no third-party icon libs)
+- **Package manager**: bun (do NOT use npm/yarn)
+- **Frontend**: Next.js 16 + React 19 + Tailwind CSS 4 + Editor.js + TanStack Query + lucide-react (v0.563)
+- **Backend**: C# / ASP.NET (replacing previous Rust/Axum implementation)
+- **Icons**: lucide-react only — no Google Material Icons, no third-party icon libs
 - **Design**: Liquid Glass system defined in `DESIGN.md`, auto-loaded via `opencode.json` `instructions`
+- **PWA**: `next-pwa` configured in `next.config.mjs`, generates service worker
 
 ## Key Architectural Facts
 
-- **No delete endpoint**: API has create/read/update only. Backend repo has `delete_page()` but no handler exposed.
-- **WebSocket**: `/ws` route exists but real-time sync is incomplete (broadcast channel not wired to page updates).
-- **Database**: PostgreSQL, UUID IDs. Blocks stored as JSONB in `blocks` table.
-- **Tailwind v4**: Uses `@import "tailwindcss"` + `@theme inline` in `globals.css`. No `tailwind.config.js`. Custom colors (primary, surface, etc.) defined as CSS custom properties.
+- **Tailwind v4**: Uses `@import "tailwindcss"` + `@theme inline` in `globals.css`. No `tailwind.config.js`. Custom colors defined as CSS custom properties in `@theme inline` block.
 - **Body background**: `#131315` (matches gradient base). Theme color meta tag is `#131315`. Do NOT set `#000000`.
+- **All components are `'use client'`** — no React Server Components used (except root `layout.tsx`).
+- **Demo data**: Project list, notes, documents, and kanban are hardcoded demo data. They don't call the real API yet.
+- **Typecheck**: No standalone `tsc` script in `package.json`. Use `tsc --noEmit` or rely on `next build`.
+- **API proxy**: `next.config.mjs` proxies `/api` to backend. Check the `rewrites` config when wiring up the new ASP.NET backend.
+
+## Path Aliases
+
+- Frontend: `@/*` → `./src/*` (tsconfig `paths`)
 
 ## Routes
 
@@ -36,6 +44,7 @@ cd backend && cargo run
 | `/` | Landing page (marketing) |
 | `/login` | Login page (Google, GitHub, Email — UI only, no backend auth) |
 | `/projects` | Project list (clean, no sidebar) |
+| `/projects/[id]` | Redirects to `/projects/[id]/notes` |
 | `/projects/[id]/notes` | Project notes (post-it cards) — default section |
 | `/projects/[id]/documents` | Project documents (Editor.js list + editor) |
 | `/projects/[id]/documents/[docId]` | Document editor (full page, inherits sidebar) |
@@ -50,32 +59,26 @@ projects/[id]/
 └── */page.tsx       ← Just renders a section component (NO wrapper needed)
 
 Components:
-  SectionShell.tsx   ← Glass panel + header (title, desc, action button)
+  SectionShell.tsx   ← Glass panel + header (title, desc, action button, fullBleed prop)
   EmptyState.tsx      ← Consistent empty state (icon + text + CTA)
   ViewTransitionLink  ← Smooth page transitions (wraps router.push in startViewTransition)
 ```
 
-**Rule**: Add new project sections by creating `projects/[id]/{section}/page.tsx` that renders `<SectionShell><YourContent /></SectionShell>`. The layout handles sidebar + navbar automatically.
+**Rule**: Add new project sections by creating `projects/[id]/{section}/page.tsx` that renders `<SectionShell><YourContent /></SectionShell>`. The layout handles sidebar + navbar automatically. Use `fullBleed` prop for full-width layouts (e.g. Kanban).
 
 ## Editor.js
 
 - Dynamic import with `ssr: false` in `BlockEditor.tsx`
-- Auto-save debounced at 2000ms
-- Currently registered tools: `@editorjs/header`, `@editorjs/list`, `@editorjs/checklist`, `@editorjs/code`
+- Registered tools: `@editorjs/header`, `@editorjs/list`, `@editorjs/checklist`, `@editorjs/code`
+- Auto-save in `documents/[docId]/page.tsx` uses a 1000ms timeout (demo-only, not wired to API)
+- Need `// @ts-ignore` on imports due to lack of TS declarations
 
 ## Adding Features
 
 **New Editor.js tool**:
-1. `bun add @editorjs/tool-name` (from frontend/)
+1. `bun add @editorjs/tool-name` (from `frontend/`)
 2. Import in `BlockEditor.tsx`
 3. Add to `tools` config object
-
-**New API endpoint**:
-1. Define request struct in `handlers.rs`
-2. Add handler function in `handlers.rs`
-3. Register route in `main.rs`
-4. Add repository method in `postgres.rs`
-5. Run `cargo sqlx prepare` to update `sqlx-data.json`
 
 **New project section**:
 1. Create component in `frontend/src/components/projects/`
@@ -84,23 +87,9 @@ Components:
 
 ## Required Commands
 
-| Task | Command |
-|------|---------|
-| Frontend dev | `cd frontend && bun run dev` |
-| Frontend build | `cd frontend && bun run build` (alias for `next build`) |
-| Frontend lint | `cd frontend && bun run lint` (alias for `eslint`) |
-| Backend check | `cargo check` (from backend/) |
-| Database migrate | `cargo sqlx migrate run` (from backend/) |
-| Run backend | `cd backend && cargo run` |
-
-## Verified Tech Versions
-
-| Package | Version |
-|---------|---------|
-| Next.js | 16.1.6 |
-| React | 19.2.3 |
-| Editor.js | 2.31.1 |
-| lucide-react | 0.563 |
-| Tailwind CSS | 4 |
-| Axum | 0.7 |
-| SQLx | 0.7 |
+| Task | Command | Directory |
+|------|---------|-----------|
+| Frontend dev | `bun run dev` | `frontend/` |
+| Frontend build | `bun run build` (alias: `next build`) | `frontend/` |
+| Frontend lint | `bun run lint` (alias: `eslint`) | `frontend/` |
+| Frontend typecheck | `bun tsc --noEmit` | `frontend/` |
