@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Plus, Trash2, Columns3, X } from 'lucide-react';
-import SectionShell from './SectionShell';
+import SectionShell, { SectionShellAction } from './SectionShell';
 import EmptyState from './EmptyState';
 
 interface Task {
@@ -41,22 +41,30 @@ export default function CanvasSection() {
   const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'medium' as Task['priority'] });
   const [dragOver, setDragOver] = useState<string | null>(null);
 
-  const handleCreate = () => {
+  const handleCreate = useCallback(() => {
     if (!newTask.title.trim()) return;
-    setTasks([{ id: `task-${Date.now()}`, title: newTask.title.trim(), description: newTask.description.trim(), status: 'todo', priority: newTask.priority }, ...tasks]);
+    setTasks((prev) => [{ id: `task-${Date.now()}`, title: newTask.title.trim(), description: newTask.description.trim(), status: 'todo', priority: newTask.priority }, ...prev]);
     setNewTask({ title: '', description: '', priority: 'medium' });
     setShowNew(false);
-  };
+  }, [newTask]);
 
-  const handleMove = (taskId: string, newStatus: Task['status']) => {
-    setTasks(tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
+  const handleMove = useCallback((taskId: string, newStatus: Task['status']) => {
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
     setDragOver(null);
-  };
+  }, []);
 
-  const getColumnTasks = (status: Task['status']) => tasks.filter((t) => t.status === status);
+  const getColumnTasks = useCallback(
+    (status: Task['status']) => tasks.filter((t) => t.status === status),
+    [tasks]
+  );
 
   return (
-    <SectionShell title="Canvas" description="Kanban board to manage project tasks and activities." actionLabel="Add Task" onAction={() => setShowNew(true)} fullBleed>
+    <SectionShell
+      title="Canvas"
+      description="Kanban board to manage project tasks and activities."
+      action={<SectionShellAction label="Add Task" onClick={() => setShowNew(true)} />}
+      fullBleed
+    >
       {tasks.length === 0 ? (
         <EmptyState icon={Columns3} title="No tasks yet" description="Create your first task and organize your workflow." action={
           <button onClick={() => setShowNew(true)} className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-bold text-sm shadow-lg shadow-primary/20 hover:saturate-150 transition-all flex items-center gap-2">
@@ -83,12 +91,11 @@ export default function CanvasSection() {
                 <div className={`flex-1 p-2 space-y-2 overflow-y-auto custom-scrollbar min-h-[200px] ${dragOver === col.id ? 'bg-primary/[0.03]' : ''}`}>
                   {columnTasks.map((task) => (
                     <div key={task.id} draggable onDragStart={(e) => e.dataTransfer.setData('taskId', task.id)}
-                      className="group rounded-xl border border-white/[0.08] p-3 cursor-grab active:cursor-grabbing hover:border-primary/20 transition-all"
-                      style={{ background: 'rgba(255,255,255,0.02)' }}
+                      className="group rounded-xl border border-white/[0.08] p-3 cursor-grab active:cursor-grabbing hover:border-primary/20 transition-all bg-white/[0.02]"
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <h4 className="font-semibold text-on-surface text-xs">{task.title}</h4>
-                        <button onClick={() => setTasks(tasks.filter((t) => t.id !== task.id))} className="p-1 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-error/10 transition-all flex-shrink-0">
+                        <button onClick={() => setTasks(tasks.filter((t) => t.id !== task.id))} className="p-1 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-error/10 transition-all flex-shrink-0" aria-label={`Delete "${task.title}"`}>
                           <Trash2 className="w-3 h-3 text-on-surface-variant/30 hover:text-error" />
                         </button>
                       </div>
@@ -105,10 +112,10 @@ export default function CanvasSection() {
       )}
 
       {showNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onKeyDown={(e) => e.key === 'Escape' && setShowNew(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowNew(false)} />
-          <div className="glass-panel relative z-10 w-full max-w-md rounded-3xl border border-white/10 shadow-2xl p-8">
-            <div className="flex items-center justify-between mb-6"><h2 className="text-lg font-bold">New Task</h2><button onClick={() => setShowNew(false)} className="p-2 rounded-full hover:bg-white/5"><X className="w-5 h-5 text-on-surface-variant" /></button></div>
+          <div className="glass-panel relative z-10 w-full max-w-md rounded-3xl border border-white/10 shadow-2xl p-8" role="dialog" aria-modal="true" aria-label="New Task">
+            <div className="flex items-center justify-between mb-6"><h2 className="text-lg font-bold">New Task</h2><button onClick={() => setShowNew(false)} className="p-2 rounded-full hover:bg-white/5" aria-label="Close"><X className="w-5 h-5 text-on-surface-variant" /></button></div>
             <div className="space-y-4">
               <div>
                 <label className="text-[10px] text-outline uppercase tracking-widest font-bold mb-1.5 block">Title</label>

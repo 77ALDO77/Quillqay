@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import ViewTransitionLink from '@/components/ViewTransitionLink';
 import {
@@ -82,8 +82,9 @@ export default function ProjectsPage() {
   const [showDelete, setShowDelete] = useState<string | null>(null);
   const [newProject, setNewProject] = useState({ title: '', description: '', tags: '' });
 
-  const filtered = projects.filter((p) =>
-    p.title.toLowerCase().includes(search.toLowerCase())
+  const filtered = useMemo(
+    () => projects.filter((p) => p.title.toLowerCase().includes(search.toLowerCase())),
+    [projects, search]
   );
 
   const handleCreate = () => {
@@ -135,10 +136,10 @@ export default function ProjectsPage() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
-          <button className="p-2 rounded-full hover:bg-white/5 transition-all">
+          <button className="p-2 rounded-full hover:bg-white/5 transition-all" aria-label="Notifications">
             <Bell className="w-4 md:w-5 h-4 md:h-5 text-on-surface-variant" />
           </button>
-          <Link href="/login" className="p-2 rounded-full hover:bg-white/5 transition-all">
+          <Link href="/login" className="p-2 rounded-full hover:bg-white/5 transition-all" aria-label="Sign out">
             <LogOut className="w-4 md:w-5 h-4 md:h-5 text-on-surface-variant" />
           </Link>
           <div className="h-7 w-7 md:h-8 md:w-8 rounded-full border border-primary/40 p-0.5">
@@ -206,6 +207,7 @@ export default function ProjectsPage() {
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowDelete(project.id); }}
                     className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-error/10 transition-all"
+                    aria-label={`Delete "${project.title}"`}
                   >
                     <Trash2 className="w-3.5 h-3.5 text-on-surface-variant/30 hover:text-error transition-colors" />
                   </button>
@@ -243,12 +245,12 @@ export default function ProjectsPage() {
 
       {/* New Project Modal */}
       {showNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onKeyDown={(e) => e.key === 'Escape' && setShowNew(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowNew(false)} />
-          <div className="glass-panel relative z-10 w-full max-w-sm rounded-3xl border border-white/10 shadow-2xl p-8">
+          <div className="glass-panel relative z-10 w-full max-w-sm rounded-3xl border border-white/10 shadow-2xl p-8" role="dialog" aria-modal="true" aria-label="New Project">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold tracking-tight">New Project</h2>
-              <button onClick={() => setShowNew(false)} className="p-2 rounded-full hover:bg-white/5 transition-all">
+              <button onClick={() => setShowNew(false)} className="p-2 rounded-full hover:bg-white/5 transition-all" aria-label="Close">
                 <X className="w-5 h-5 text-on-surface-variant" />
               </button>
             </div>
@@ -289,9 +291,9 @@ export default function ProjectsPage() {
 
       {/* Delete Modal */}
       {showDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onKeyDown={(e) => e.key === 'Escape' && setShowDelete(null)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDelete(null)} />
-          <div className="glass-panel relative z-10 w-full max-w-xs rounded-3xl border border-white/10 shadow-2xl p-8 text-center">
+          <div className="glass-panel relative z-10 w-full max-w-xs rounded-3xl border border-white/10 shadow-2xl p-8 text-center" role="dialog" aria-modal="true" aria-label="Confirm delete">
             <Trash2 className="w-10 h-10 text-error mx-auto mb-3" />
             <h2 className="text-lg font-bold mb-2">Delete project?</h2>
             <p className="text-xs text-on-surface-variant/70 mb-6">This is a demo. In production, all data will be removed.</p>

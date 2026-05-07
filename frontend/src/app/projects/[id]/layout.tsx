@@ -15,6 +15,10 @@ const sidebarLinks = [
   { href: 'canvas', label: 'Canvas', icon: Columns3 },
 ];
 
+const NAVBAR_BG = { background: 'linear-gradient(135deg, rgba(28,27,29,0.9) 0%, rgba(20,20,22,0.95) 100%)' } as const;
+const SIDEBAR_BG = { background: 'linear-gradient(135deg, rgba(28,27,29,0.95) 0%, rgba(20,20,22,0.98) 100%)' } as const;
+const SIDEBAR_INSET = { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' } as const;
+
 export default function ProjectLayout({ children }: { children: ReactNode }) {
   const params = useParams();
   const pathname = usePathname();
@@ -34,7 +38,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
       <div className="fixed bottom-[-10%] right-[-5%] w-[30vw] h-[30vw] bg-secondary/3 rounded-full blur-[100px] pointer-events-none z-0" />
 
       {/* ============ FLOATING NAVBAR ============ */}
-      <header className="sticky top-0 z-50 relative flex justify-between items-center px-4 md:px-6 py-3 mt-4 mx-4 rounded-2xl border border-white/[0.12] backdrop-blur-2xl shadow-[0_24px_50px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.04)_inset]" style={{ background: 'linear-gradient(135deg, rgba(28,27,29,0.9) 0%, rgba(20,20,22,0.95) 100%)' }}>
+      <header className="sticky top-0 z-50 relative flex justify-between items-center px-4 md:px-6 py-3 mt-4 mx-4 rounded-2xl border border-white/[0.12] backdrop-blur-2xl shadow-[0_24px_50px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.04)_inset]"         style={NAVBAR_BG}>
         {/* Under-glow for navbar */}
         <div className="absolute -inset-4 bg-primary/[0.04] rounded-[20px] blur-2xl pointer-events-none -z-10" />
         {/* Left side */}
@@ -42,6 +46,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
           <Link
             href="/projects"
             className="p-2 rounded-xl hover:bg-white/[0.06] transition-all text-on-surface-variant/60 hover:text-on-surface-variant"
+            aria-label="Back to projects"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
@@ -62,7 +67,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
 
         {/* Right side */}
         <div className="flex items-center gap-2 md:gap-4">
-          <button className="p-2 rounded-full hover:bg-white/5 transition-all">
+          <button className="p-2 rounded-full hover:bg-white/5 transition-all" aria-label="Notifications">
             <Bell className="w-4 md:w-5 h-4 md:h-5 text-on-surface-variant/50" />
           </button>
           <div className="h-7 w-7 md:h-8 md:w-8 rounded-full border border-primary/30 p-0.5">
@@ -85,10 +90,10 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
           transition-all duration-700 ease-out
           ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}
         `}
-        style={{ background: 'linear-gradient(135deg, rgba(28,27,29,0.95) 0%, rgba(20,20,22,0.98) 100%)' }}
+        style={SIDEBAR_BG}
       >
         <div className="absolute -inset-8 bg-primary/[0.04] rounded-[40px] blur-3xl pointer-events-none -z-10" />
-        <div className="absolute inset-0 rounded-3xl pointer-events-none" style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }} />
+        <div className="absolute inset-0 rounded-3xl pointer-events-none" style={SIDEBAR_INSET} />
 
         <div className="p-5 border-b border-white/[0.06]">
           <div className="flex items-center gap-2.5 mb-6">
@@ -101,7 +106,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
 
-          <nav className="space-y-1">
+          <nav aria-label="Project sections" className="space-y-1">
             {sidebarLinks.map((link, i) => {
               const isActive = currentSection === link.href;
               return (
@@ -131,7 +136,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
         </div>
 
         <div className="mt-auto p-5 border-t border-white/[0.06]">
-          <Link
+            <Link
             href="/login"
             className={`
               flex items-center gap-3 px-4 py-2.5 rounded-xl
@@ -140,6 +145,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
               ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
             `}
             style={{ transitionDelay: '600ms' }}
+            aria-label="Sign out"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>
