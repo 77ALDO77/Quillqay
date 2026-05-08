@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Plus, FileText, Clock, ArrowRight, Trash2, X } from 'lucide-react';
-import SectionShell from './SectionShell';
+import SectionShell, { SectionShellAction } from './SectionShell';
 import EmptyState from './EmptyState';
 
 interface Document {
@@ -28,15 +28,19 @@ export default function DocumentsSection() {
   const [showNew, setShowNew] = useState(false);
   const [newTitle, setNewTitle] = useState('');
 
-  const handleCreate = () => {
+  const handleCreate = useCallback(() => {
     if (!newTitle.trim()) return;
-    setDocs([{ id: `doc-${Date.now()}`, title: newTitle.trim(), blocks: 0, updatedAt: 'Just now' }, ...docs]);
+    setDocs((prev) => [{ id: `doc-${Date.now()}`, title: newTitle.trim(), blocks: 0, updatedAt: 'Just now' }, ...prev]);
     setNewTitle('');
     setShowNew(false);
-  };
+  }, [newTitle]);
 
   return (
-    <SectionShell title="Documents" description="Long-form documents with rich block editing." actionLabel="New Document" onAction={() => setShowNew(true)}>
+    <SectionShell
+      title="Documents"
+      description="Long-form documents with rich block editing."
+      action={<SectionShellAction label="New Document" onClick={() => setShowNew(true)} />}
+    >
       {docs.length === 0 ? (
         <EmptyState icon={FileText} title="No documents yet" description="Create rich documents with headers, lists, code blocks, and more." action={
           <button onClick={() => setShowNew(true)} className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-bold text-sm shadow-lg shadow-primary/20 hover:saturate-150 transition-all flex items-center gap-2">
@@ -62,10 +66,10 @@ export default function DocumentsSection() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 ml-3 flex-shrink-0">
-                  <button onClick={() => setDocs(docs.filter((d) => d.id !== doc.id))} className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-error/10 transition-all">
+                  <button onClick={() => setDocs(docs.filter((d) => d.id !== doc.id))} className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-error/10 transition-all" aria-label={`Delete "${doc.title}"`}>
                     <Trash2 className="w-4 h-4 text-on-surface-variant/30 hover:text-error" />
                   </button>
-                  <Link href={`/projects/${projectId}/documents/${doc.id}`} className="p-2 rounded-lg hover:bg-white/5 transition-all">
+                  <Link href={`/projects/${projectId}/documents/${doc.id}`} className="p-2 rounded-lg hover:bg-white/5 transition-all" aria-label={`Open "${doc.title}"`}>
                     <ArrowRight className="w-4 h-4 text-on-surface-variant/20 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                   </Link>
                 </div>
@@ -76,10 +80,10 @@ export default function DocumentsSection() {
       )}
 
       {showNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onKeyDown={(e) => e.key === 'Escape' && setShowNew(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowNew(false)} />
-          <div className="glass-panel relative z-10 w-full max-w-sm rounded-3xl border border-white/10 shadow-2xl p-8">
-            <div className="flex items-center justify-between mb-6"><h2 className="text-lg font-bold">New Document</h2><button onClick={() => setShowNew(false)} className="p-2 rounded-full hover:bg-white/5"><X className="w-5 h-5 text-on-surface-variant" /></button></div>
+          <div className="glass-panel relative z-10 w-full max-w-sm rounded-3xl border border-white/10 shadow-2xl p-8" role="dialog" aria-modal="true" aria-label="New Document">
+            <div className="flex items-center justify-between mb-6"><h2 className="text-lg font-bold">New Document</h2><button onClick={() => setShowNew(false)} className="p-2 rounded-full hover:bg-white/5" aria-label="Close"><X className="w-5 h-5 text-on-surface-variant" /></button></div>
             <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Document title" className="w-full px-4 py-3 rounded-xl bg-surface-container-low border border-white/10 text-on-surface text-sm placeholder:text-outline/50 focus:border-primary outline-none" autoFocus onKeyDown={(e) => e.key === 'Enter' && handleCreate()} />
             <div className="flex gap-3 mt-4">
               <button onClick={() => setShowNew(false)} className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-on-surface-variant text-sm font-medium hover:bg-white/10">Cancel</button>

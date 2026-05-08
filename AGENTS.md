@@ -1,5 +1,14 @@
 # Quillqay - AI Agent Instructions
 
+## Stack
+
+- **Package manager**: bun (do NOT use npm/yarn)
+- **Frontend**: Next.js 16 + React 19 + Tailwind CSS 4 + Editor.js + TanStack Query + lucide-react (v0.563)
+- **Backend**: C# / ASP.NET + Entity Framework Core + Postgres
+- **Icons**: lucide-react only — no Google Material Icons, no third-party icon libs
+- **Design**: Liquid Glass system defined in `DESIGN.md`
+- **PWA**: `next-pwa` configured in `next.config.mjs`, generates service worker
+
 ## Running Locally
 
 **Frontend** (Next.js on port 3000):
@@ -7,35 +16,41 @@
 cd frontend && bun run dev
 ```
 
-**Backend** (C# / ASP.NET):
+**Backend** (C#/ASP.NET on port 3000):
 ```bash
-# TODO: document backend run command
+cd backend && dotnet run
 ```
+Requires `DATABASE_URL` env var (see `backend/.env.example`) and a Postgres instance.
+
+**Local dev port conflict**: Both frontend and backend default to port 3000. When running both locally, the frontend's `next dev` will auto-switch to port 3001. The `next.config.mjs` proxy rewrites `/api` to `http://127.0.0.1:8080` (for k8s port-forward). Adjust the proxy destination in `next.config.mjs` if running backend directly on port 3000.
 
 **Env vars**:
-- Frontend: `NEXT_PUBLIC_API_URL` (defaults to `/api/v1`)
-
-## Stack
-
-- **Package manager**: bun (do NOT use npm/yarn)
-- **Frontend**: Next.js 16 + React 19 + Tailwind CSS 4 + Editor.js + TanStack Query + lucide-react (v0.563)
-- **Backend**: C# / ASP.NET (replacing previous Rust/Axum implementation)
-- **Icons**: lucide-react only — no Google Material Icons, no third-party icon libs
-- **Design**: Liquid Glass system defined in `DESIGN.md`, auto-loaded via `opencode.json` `instructions`
-- **PWA**: `next-pwa` configured in `next.config.mjs`, generates service worker
+- Frontend: `NEXT_PUBLIC_API_URL` (defaults to `/api/v1`) — see `frontend/src/lib/api.ts`
+- Backend: `DATABASE_URL` — see `backend/.env.example`
 
 ## Key Architectural Facts
 
 - **Tailwind v4**: Uses `@import "tailwindcss"` + `@theme inline` in `globals.css`. No `tailwind.config.js`. Custom colors defined as CSS custom properties in `@theme inline` block.
 - **Body background**: `#131315` (matches gradient base). Theme color meta tag is `#131315`. Do NOT set `#000000`.
-- **All components are `'use client'`** — no React Server Components used (except root `layout.tsx`).
+- **Fonts**: Inter + Space Grotesk loaded via `next/font/google` in root `layout.tsx`. CSS variables `--font-inter` and `--font-space-grotesk`.
+- **All page components are `'use client'`** — no React Server Components used (except root `layout.tsx`).
 - **Demo data**: Project list, notes, documents, and kanban are hardcoded demo data. They don't call the real API yet.
-- **Typecheck**: No standalone `tsc` script in `package.json`. Use `tsc --noEmit` or rely on `next build`.
-- **API proxy**: `next.config.mjs` proxies `/api` to backend. Check the `rewrites` config when wiring up the new ASP.NET backend.
+- **Typecheck**: No standalone `tsc` script in `package.json`. Use `bun tsc --noEmit` from `frontend/`.
+- **API proxy**: `next.config.mjs` proxies `/api` to backend. Check the `rewrites` config when wiring up the API.
 
 ## Path Aliases
 
 - Frontend: `@/*` → `./src/*` (tsconfig `paths`)
+
+## Backend Notes
+
+- **Framework**: ASP.NET Core with Entity Framework Core + Postgres
+- **Port**: Listens on port 3000. K8s service maps port 80 → targetPort 3000.
+- **Health check**: `GET /health`
+- **API prefix**: Routes are at `/api/v1/` (e.g., `/api/v1/pages`)
+- **WebSocket**: `/ws` endpoint
+- **CI**: GitHub Actions builds Docker image for backend only (PRs that touch `backend/**`). Pushes to `ghcr.io`.
+- **K8s**: Configs in `k8s/` — backend deployment, Postgres StatefulSet, Cloudflare tunnel, secrets.
 
 ## Routes
 
@@ -90,6 +105,9 @@ Components:
 | Task | Command | Directory |
 |------|---------|-----------|
 | Frontend dev | `bun run dev` | `frontend/` |
-| Frontend build | `bun run build` (alias: `next build`) | `frontend/` |
-| Frontend lint | `bun run lint` (alias: `eslint`) | `frontend/` |
+| Frontend build | `bun run build` | `frontend/` |
+| Frontend lint | `bun run lint` | `frontend/` |
 | Frontend typecheck | `bun tsc --noEmit` | `frontend/` |
+| Backend dev | `dotnet run` | `backend/` |
+| Backend build | `dotnet build --configuration Release` | `backend/` |
+| Backend test | `dotnet test` | `backend/` |

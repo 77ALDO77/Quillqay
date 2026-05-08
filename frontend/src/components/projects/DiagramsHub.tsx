@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Plus, GitBranch, Database, Network, Workflow, Pencil, Trash2, X, ArrowRight } from 'lucide-react';
-import SectionShell from './SectionShell';
+import SectionShell, { SectionShellAction } from './SectionShell';
 import EmptyState from './EmptyState';
 
 interface Diagram {
@@ -38,7 +38,11 @@ export default function DiagramsHub() {
   };
 
   return (
-    <SectionShell title="Diagrams" description="Database schemas, architecture diagrams, flowcharts, and whiteboards." actionLabel="New Diagram" onAction={() => setShowNew(true)}>
+    <SectionShell
+      title="Diagrams"
+      description="Database schemas, architecture diagrams, flowcharts, and whiteboards."
+      action={<SectionShellAction label="New Diagram" onClick={() => setShowNew(true)} />}
+    >
       {diagrams.length === 0 ? (
         <EmptyState icon={GitBranch} title="No diagrams yet" description="Create database schemas, architecture diagrams, flowcharts, or free-form whiteboards." action={
           <button onClick={() => setShowNew(true)} className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-bold text-sm shadow-lg shadow-primary/20 hover:saturate-150 transition-all flex items-center gap-2">
@@ -57,7 +61,7 @@ export default function DiagramsHub() {
                 <div className="p-4">
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="font-semibold text-on-surface text-sm truncate">{diagram.title}</h3>
-                    <button onClick={() => setDiagrams(diagrams.filter((d) => d.id !== diagram.id))} className="p-1 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-error/10 transition-all ml-2 flex-shrink-0">
+                    <button onClick={() => setDiagrams(diagrams.filter((d) => d.id !== diagram.id))} className="p-1 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-error/10 transition-all ml-2 flex-shrink-0" aria-label={`Delete "${diagram.title}"`}>
                       <Trash2 className="w-3 h-3 text-on-surface-variant/30 hover:text-error" />
                     </button>
                   </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ReactNode, useCallback } from 'react';
+import { ReactNode, useCallback, memo } from 'react';
 
 interface Props {
   href: string;
@@ -11,7 +11,7 @@ interface Props {
   onClick?: () => void;
 }
 
-export default function ViewTransitionLink({ href, className, style, children, onClick }: Props) {
+function ViewTransitionLink({ href, className, style, children, onClick }: Props) {
   const router = useRouter();
 
   const handleClick = useCallback(
@@ -19,7 +19,6 @@ export default function ViewTransitionLink({ href, className, style, children, o
       e.preventDefault();
       onClick?.();
 
-      // Use View Transitions API if available
       if (document.startViewTransition) {
         document.startViewTransition(() => {
           router.push(href);
@@ -37,3 +36,5 @@ export default function ViewTransitionLink({ href, className, style, children, o
     </a>
   );
 }
+
+export default memo(ViewTransitionLink);

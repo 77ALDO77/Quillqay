@@ -2,13 +2,13 @@
 
 import React, { useEffect, useRef } from 'react';
 import EditorJS from '@editorjs/editorjs';
-// @ts-ignore
+// @ts-expect-error - no TS declarations available
 import Header from '@editorjs/header';
-// @ts-ignore
+// @ts-expect-error - no TS declarations available
 import List from '@editorjs/list';
-// @ts-ignore
+// @ts-expect-error - no TS declarations available
 import Checklist from '@editorjs/checklist';
-// @ts-ignore
+// @ts-expect-error - no TS declarations available
 import Code from '@editorjs/code';
 
 import { Block } from '@/lib/api';
@@ -28,7 +28,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
 }) => {
   const ref = useRef<EditorJS | null>(null);
 
-  // @ts-ignore
+  // @ts-expect-error - Editor.js tools type is complex, using any for flexibility
   const tools: any = {
     header: {
       class: Header,
@@ -77,6 +77,9 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
         ref.current = null;
       }
     };
+    // Intentionally empty deps: EditorJS instance must be created once on mount.
+    // Changing holderId, readOnly, or initialData after mount would require full
+    // editor re-initialization which EditorJS does not support reactively.
   }, []);
 
   return (
