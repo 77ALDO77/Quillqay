@@ -2,13 +2,9 @@
 
 import React, { useEffect, useRef } from 'react';
 import EditorJS from '@editorjs/editorjs';
-// @ts-expect-error - no TS declarations available
 import Header from '@editorjs/header';
-// @ts-expect-error - no TS declarations available
 import List from '@editorjs/list';
-// @ts-expect-error - no TS declarations available
 import Checklist from '@editorjs/checklist';
-// @ts-expect-error - no TS declarations available
 import Code from '@editorjs/code';
 
 import { Block } from '@/lib/api';
@@ -28,7 +24,6 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
 }) => {
   const ref = useRef<EditorJS | null>(null);
 
-  // @ts-expect-error - Editor.js tools type is complex, using any for flexibility
   const tools: any = {
     header: {
       class: Header,

@@ -7,7 +7,6 @@ import {
   Terminal, Bell, LogOut, ArrowLeft,
   StickyNote, FileText, GitBranch, Columns3,
 } from 'lucide-react';
-
 const sidebarLinks = [
   { href: 'notes', label: 'Notes', icon: StickyNote },
   { href: 'documents', label: 'Documents', icon: FileText },
@@ -24,6 +23,10 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const id = params.id as string;
   const [mounted, setMounted] = useState(false);
+  const isDbDiagram = pathname.includes('/diagrams/db/');
+  const isFlowchart = pathname.includes('/diagrams/flowchart/');
+  const isWhiteboard = pathname.includes('/diagrams/whiteboard/');
+  const isDiagramEditor = isDbDiagram || isFlowchart || isWhiteboard;
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 50);
@@ -39,14 +42,12 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
 
       {/* ============ FLOATING NAVBAR ============ */}
       <header className="sticky top-0 z-50 relative flex justify-between items-center px-4 md:px-6 py-3 mt-4 mx-4 rounded-2xl border border-white/[0.12] backdrop-blur-2xl shadow-[0_24px_50px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.04)_inset]"         style={NAVBAR_BG}>
-        {/* Under-glow for navbar */}
         <div className="absolute -inset-4 bg-primary/[0.04] rounded-[20px] blur-2xl pointer-events-none -z-10" />
-        {/* Left side */}
         <div className="flex items-center gap-3">
           <Link
-            href="/projects"
+            href={isDiagramEditor ? `/projects/${id}/diagrams` : '/projects'}
             className="p-2 rounded-xl hover:bg-white/[0.06] transition-all text-on-surface-variant/60 hover:text-on-surface-variant"
-            aria-label="Back to projects"
+            aria-label={isDiagramEditor ? 'Back to diagrams' : 'Back to projects'}
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
@@ -60,12 +61,10 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        {/* Section label - center */}
         <span className="text-xs text-on-surface-variant/50 font-medium uppercase tracking-wider">
-          {sidebarLinks.find((l) => l.href === currentSection)?.label}
+          {isDbDiagram ? 'Database Schema' : isFlowchart ? 'Flowchart' : isWhiteboard ? 'Whiteboard' : (sidebarLinks.find((l) => l.href === currentSection)?.label)}
         </span>
 
-        {/* Right side */}
         <div className="flex items-center gap-2 md:gap-4">
           <button className="p-2 rounded-full hover:bg-white/5 transition-all" aria-label="Notifications">
             <Bell className="w-4 md:w-5 h-4 md:h-5 text-on-surface-variant/50" />
@@ -76,89 +75,102 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      {/* ============ FLOATING SIDEBAR ============ */}
-      <aside
-        className={`
-          fixed z-40
-          top-[76px] bottom-4 left-4
-          w-[240px] lg:w-[260px]
-          flex flex-col
-          rounded-3xl
-          border border-white/[0.12]
-          shadow-[0_24px_80px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.05)_inset]
-          backdrop-blur-2xl
-          transition-all duration-700 ease-out
-          ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}
-        `}
-        style={SIDEBAR_BG}
-      >
-        <div className="absolute -inset-8 bg-primary/[0.04] rounded-[40px] blur-3xl pointer-events-none -z-10" />
-        <div className="absolute inset-0 rounded-3xl pointer-events-none" style={SIDEBAR_INSET} />
-
-        <div className="p-5 border-b border-white/[0.06]">
-          <div className="flex items-center gap-2.5 mb-6">
-            <div className="w-8 h-8 bg-primary-container/80 rounded-xl flex items-center justify-center glow-accent">
-              <Terminal className="w-4 h-4 text-on-primary-container" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-on-surface">Project</div>
-              <div className="text-[10px] text-on-surface-variant/40 truncate max-w-[140px]">{id}</div>
-            </div>
+      {isDiagramEditor ? (
+        <>
+          {/* ============ CONTENT AREA (full width, page renders sidebar) ============ */}
+          <div className="h-[calc(100vh-60px)] flex flex-col">
+            <main className="flex-1 p-4 md:p-6 pb-4">
+              {children}
+            </main>
           </div>
-
-          <nav aria-label="Project sections" className="space-y-1">
-            {sidebarLinks.map((link, i) => {
-              const isActive = currentSection === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={`/projects/${id}/${link.href}`}
-                  className={`
-                    flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium
-                    transition-all duration-500 ease-out
-                    ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
-                    ${isActive
-                      ? 'text-primary bg-primary/[0.1] scale-[1.02]'
-                      : 'text-on-surface-variant/60 hover:bg-white/[0.04] hover:text-on-surface-variant'
-                    }
-                  `}
-                  style={{ transitionDelay: `${200 + i * 60}ms` }}
-                >
-                  <link.icon className={`w-4 h-4 transition-colors ${isActive ? 'text-primary' : ''}`} />
-                  <span>{link.label}</span>
-                  {isActive && (
-                    <div className="ml-auto w-1 h-4 rounded-full bg-primary shadow-[0_0_8px_rgba(214,186,255,0.5)]" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div className="mt-auto p-5 border-t border-white/[0.06]">
-            <Link
-            href="/login"
+        </>
+      ) : (
+        <>
+          {/* ============ FLOATING SIDEBAR ============ */}
+          <aside
             className={`
-              flex items-center gap-3 px-4 py-2.5 rounded-xl
-              text-on-surface-variant/40 hover:bg-white/[0.04] hover:text-on-surface-variant/70
-              transition-all duration-500 ease-out text-xs
-              ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+              fixed z-40
+              top-[76px] bottom-4 left-4
+              w-[240px] lg:w-[260px]
+              flex flex-col
+              rounded-3xl
+              border border-white/[0.12]
+              shadow-[0_24px_80px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.05)_inset]
+              backdrop-blur-2xl
+              transition-all duration-700 ease-out
+              ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}
             `}
-            style={{ transitionDelay: '600ms' }}
-            aria-label="Sign out"
+            style={SIDEBAR_BG}
           >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Sign Out</span>
-          </Link>
-        </div>
-      </aside>
+            <div className="absolute -inset-8 bg-primary/[0.04] rounded-[40px] blur-3xl pointer-events-none -z-10" />
+            <div className="absolute inset-0 rounded-3xl pointer-events-none" style={SIDEBAR_INSET} />
 
-      {/* ============ CONTENT AREA (pushed by sidebar, no navbar) ============ */}
-      <div className="ml-0 lg:ml-[276px] md:ml-[256px] min-h-[calc(100vh-60px)] flex flex-col">
-        <main className="flex-1 p-4 md:p-6 pb-4">
-          {children}
-        </main>
-      </div>
+            <div className="p-5 border-b border-white/[0.06]">
+              <div className="flex items-center gap-2.5 mb-6">
+                <div className="w-8 h-8 bg-primary-container/80 rounded-xl flex items-center justify-center glow-accent">
+                  <Terminal className="w-4 h-4 text-on-primary-container" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-on-surface">Project</div>
+                  <div className="text-[10px] text-on-surface-variant/40 truncate max-w-[140px]">{id}</div>
+                </div>
+              </div>
+
+              <nav aria-label="Project sections" className="space-y-1">
+                {sidebarLinks.map((link, i) => {
+                  const isActive = currentSection === link.href;
+                  return (
+                    <Link
+                      key={link.href}
+                      href={`/projects/${id}/${link.href}`}
+                      className={`
+                        flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium
+                        transition-all duration-500 ease-out
+                        ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                        ${isActive
+                          ? 'text-primary bg-primary/[0.1] scale-[1.02]'
+                          : 'text-on-surface-variant/60 hover:bg-white/[0.04] hover:text-on-surface-variant'
+                        }
+                      `}
+                      style={{ transitionDelay: `${200 + i * 60}ms` }}
+                    >
+                      <link.icon className={`w-4 h-4 transition-colors ${isActive ? 'text-primary' : ''}`} />
+                      <span>{link.label}</span>
+                      {isActive && (
+                        <div className="ml-auto w-1 h-4 rounded-full bg-primary shadow-[0_0_8px_rgba(214,186,255,0.5)]" />
+                      )}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+
+            <div className="mt-auto p-5 border-t border-white/[0.06]">
+                <Link
+                href="/login"
+                className={`
+                  flex items-center gap-3 px-4 py-2.5 rounded-xl
+                  text-on-surface-variant/40 hover:bg-white/[0.04] hover:text-on-surface-variant/70
+                  transition-all duration-500 ease-out text-xs
+                  ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
+                `}
+                style={{ transitionDelay: '600ms' }}
+                aria-label="Sign out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </Link>
+            </div>
+          </aside>
+
+          {/* ============ CONTENT AREA (pushed by sidebar) ============ */}
+          <div className="ml-0 lg:ml-[276px] md:ml-[256px] min-h-[calc(100vh-60px)] flex flex-col">
+            <main className="flex-1 p-4 md:p-6 pb-4">
+              {children}
+            </main>
+          </div>
+        </>
+      )}
     </div>
   );
 }

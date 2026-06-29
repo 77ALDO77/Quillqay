@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Plus, GitBranch, Database, Network, Workflow, Pencil, Trash2, X, ArrowRight } from 'lucide-react';
 import SectionShell, { SectionShellAction } from './SectionShell';
@@ -27,7 +28,31 @@ const demoDiagrams: Diagram[] = [
   { id: 'diag-4', title: 'Dashboard Wireframe', type: 'whiteboard', updatedAt: 'Last week' },
 ];
 
+function CardContent({ diagram, typeInfo, onDelete }: { diagram: Diagram; typeInfo: typeof diagramTypes[number]; onDelete: () => void }) {
+  return (
+    <>
+      <div className="h-36 bg-surface-container-lowest flex items-center justify-center border-b border-white/[0.05]">
+        <typeInfo.icon className="w-14 h-14 text-outline-variant/15 group-hover:text-primary/25 transition-colors" />
+      </div>
+      <div className="p-4">
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="font-semibold text-on-surface text-sm truncate">{diagram.title}</h3>
+          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }} className="p-1 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-error/10 transition-all ml-2 flex-shrink-0" aria-label={`Delete "${diagram.title}"`}>
+            <Trash2 className="w-3 h-3 text-on-surface-variant/30 hover:text-error" />
+          </button>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="px-2 py-0.5 rounded-full bg-surface-container-high text-[10px] text-outline uppercase tracking-widest font-bold">{typeInfo.label}</span>
+          <span className="text-[10px] text-outline font-medium">{diagram.updatedAt}</span>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function DiagramsHub() {
+  const params = useParams();
+  const projectId = params.id as string;
   const [diagrams, setDiagrams] = useState<Diagram[]>(demoDiagrams);
   const [showNew, setShowNew] = useState(false);
 
@@ -55,21 +80,21 @@ export default function DiagramsHub() {
             const typeInfo = diagramTypes.find((t) => t.id === diagram.type)!;
             return (
               <div key={diagram.id} className="group relative overflow-hidden rounded-2xl border border-white/[0.08] hover:border-primary/20 transition-all duration-300">
-                <div className="h-36 bg-surface-container-lowest flex items-center justify-center border-b border-white/[0.05]">
-                  <typeInfo.icon className="w-14 h-14 text-outline-variant/15 group-hover:text-primary/25 transition-colors" />
-                </div>
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-on-surface text-sm truncate">{diagram.title}</h3>
-                    <button onClick={() => setDiagrams(diagrams.filter((d) => d.id !== diagram.id))} className="p-1 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-error/10 transition-all ml-2 flex-shrink-0" aria-label={`Delete "${diagram.title}"`}>
-                      <Trash2 className="w-3 h-3 text-on-surface-variant/30 hover:text-error" />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="px-2 py-0.5 rounded-full bg-surface-container-high text-[10px] text-outline uppercase tracking-widest font-bold">{typeInfo.label}</span>
-                    <span className="text-[10px] text-outline font-medium">{diagram.updatedAt}</span>
-                  </div>
-                </div>
+                {diagram.type === 'db' ? (
+                  <Link href={`/projects/${projectId}/diagrams/db/${diagram.id}`} className="block">
+                    <CardContent diagram={diagram} typeInfo={typeInfo} onDelete={() => setDiagrams(diagrams.filter((d) => d.id !== diagram.id))} />
+                  </Link>
+                ) : diagram.type === 'flowchart' ? (
+                  <Link href={`/projects/${projectId}/diagrams/flowchart/${diagram.id}`} className="block">
+                    <CardContent diagram={diagram} typeInfo={typeInfo} onDelete={() => setDiagrams(diagrams.filter((d) => d.id !== diagram.id))} />
+                  </Link>
+                ) : diagram.type === 'whiteboard' ? (
+                  <Link href={`/projects/${projectId}/diagrams/whiteboard/${diagram.id}`} className="block">
+                    <CardContent diagram={diagram} typeInfo={typeInfo} onDelete={() => setDiagrams(diagrams.filter((d) => d.id !== diagram.id))} />
+                  </Link>
+                ) : (
+                  <CardContent diagram={diagram} typeInfo={typeInfo} onDelete={() => setDiagrams(diagrams.filter((d) => d.id !== diagram.id))} />
+                )}
               </div>
             );
           })}

@@ -4,21 +4,21 @@
 
 - **Package manager**: bun (do NOT use npm/yarn)
 - **Frontend**: Next.js 16 + React 19 + Tailwind CSS 4 + Editor.js + TanStack Query + lucide-react (v0.563)
-- **Backend**: C# / ASP.NET + Entity Framework Core + Postgres
+- **Backend**: Rust (Axum 0.7 + SQLx 0.7 + Postgres)
 - **Icons**: lucide-react only — no Google Material Icons, no third-party icon libs
 - **Design**: Liquid Glass system defined in `DESIGN.md`
 - **PWA**: `next-pwa` configured in `next.config.mjs`, generates service worker
 
 ## Running Locally
 
-**Frontend** (Next.js on port 3000):
+**Frontend** (Next.js):
 ```bash
 cd frontend && bun run dev
 ```
 
-**Backend** (C#/ASP.NET on port 3000):
+**Backend** (Rust):
 ```bash
-cd backend && dotnet run
+cd backend && cargo run
 ```
 Requires `DATABASE_URL` env var (see `backend/.env.example`) and a Postgres instance.
 
@@ -34,7 +34,7 @@ Requires `DATABASE_URL` env var (see `backend/.env.example`) and a Postgres inst
 - **Body background**: `#131315` (matches gradient base). Theme color meta tag is `#131315`. Do NOT set `#000000`.
 - **Fonts**: Inter + Space Grotesk loaded via `next/font/google` in root `layout.tsx`. CSS variables `--font-inter` and `--font-space-grotesk`.
 - **All page components are `'use client'`** — no React Server Components used (except root `layout.tsx`).
-- **Demo data**: Project list, notes, documents, and kanban are hardcoded demo data. They don't call the real API yet.
+- **Demo data**: Notes, documents, kanban, diagrams are hardcoded demo data. Frontend does NOT call the real API yet.
 - **Typecheck**: No standalone `tsc` script in `package.json`. Use `bun tsc --noEmit` from `frontend/`.
 - **API proxy**: `next.config.mjs` proxies `/api` to backend. Check the `rewrites` config when wiring up the API.
 
@@ -42,15 +42,18 @@ Requires `DATABASE_URL` env var (see `backend/.env.example`) and a Postgres inst
 
 - Frontend: `@/*` → `./src/*` (tsconfig `paths`)
 
-## Backend Notes
+## Backend (Rust / Axum)
 
-- **Framework**: ASP.NET Core with Entity Framework Core + Postgres
-- **Port**: Listens on port 3000. K8s service maps port 80 → targetPort 3000.
+- **Framework**: Axum 0.7 + SQLx 0.7 + PostgreSQL
+- **Port**: `0.0.0.0:3000`
 - **Health check**: `GET /health`
-- **API prefix**: Routes are at `/api/v1/` (e.g., `/api/v1/pages`)
-- **WebSocket**: `/ws` endpoint
-- **CI**: GitHub Actions builds Docker image for backend only (PRs that touch `backend/**`). Pushes to `ghcr.io`.
-- **K8s**: Configs in `k8s/` — backend deployment, Postgres StatefulSet, Cloudflare tunnel, secrets.
+- **API prefix**: Routes at `/api/v1/` — e.g. `GET /api/v1/pages`, `GET/PUT /api/v1/pages/:id`
+- **WebSocket**: `GET /ws`
+- **Database**: SQLx with Postgres. Migrations are SQL files in `backend/migrations/`, run via `sqlx migrate run`
+- **Offline builds**: `sqlx-data.json` checked in for Docker builds (`SQLX_OFFLINE=true`)
+- **Build**: `cargo build --release` produces binary `qillqay-backend`
+- **CI**: GitHub Actions builds + pushes Docker image to `ghcr.io` on pushes/PRs touching `backend/**`
+- **K8s**: Configs in `k8s/` — backend deployment (2 replicas), Postgres StatefulSet, Cloudflare tunnel, secrets
 
 ## Routes
 
@@ -86,7 +89,7 @@ Components:
 - Dynamic import with `ssr: false` in `BlockEditor.tsx`
 - Registered tools: `@editorjs/header`, `@editorjs/list`, `@editorjs/checklist`, `@editorjs/code`
 - Auto-save in `documents/[docId]/page.tsx` uses a 1000ms timeout (demo-only, not wired to API)
-- Need `// @ts-ignore` on imports due to lack of TS declarations
+- Module declarations in `src/types/editorjs.d.ts` for editorjs tool packages that lack TS types
 
 ## Adding Features
 
@@ -108,6 +111,5 @@ Components:
 | Frontend build | `bun run build` | `frontend/` |
 | Frontend lint | `bun run lint` | `frontend/` |
 | Frontend typecheck | `bun tsc --noEmit` | `frontend/` |
-| Backend dev | `dotnet run` | `backend/` |
-| Backend build | `dotnet build --configuration Release` | `backend/` |
-| Backend test | `dotnet test` | `backend/` |
+| Backend dev | `cargo run` | `backend/` |
+| Backend build | `cargo build --release` | `backend/` |
