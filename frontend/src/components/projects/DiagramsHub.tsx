@@ -22,10 +22,12 @@ const diagramTypes = [
 ];
 
 const demoDiagrams: Diagram[] = [
-  { id: 'diag-1', title: 'User DB Schema', type: 'db', updatedAt: 'Today' },
-  { id: 'diag-2', title: 'Microservices Architecture', type: 'architecture', updatedAt: 'Yesterday' },
-  { id: 'diag-3', title: 'Auth Flow', type: 'flowchart', updatedAt: '3 days ago' },
-  { id: 'diag-4', title: 'Dashboard Wireframe', type: 'whiteboard', updatedAt: 'Last week' },
+  { id: 'diag-1', title: 'Employees DB Schema', type: 'db', updatedAt: 'Today' },
+  { id: 'diag-2', title: 'E-Commerce Schema', type: 'db', updatedAt: 'Yesterday' },
+  { id: 'diag-3', title: 'User Auth Flow', type: 'flowchart', updatedAt: '3 days ago' },
+  { id: 'diag-4', title: 'Payment Process', type: 'flowchart', updatedAt: '2 days ago' },
+  { id: 'diag-5', title: 'API Architecture', type: 'architecture', updatedAt: 'Last week' },
+  { id: 'diag-6', title: 'Team Brainstorm', type: 'whiteboard', updatedAt: 'Today' },
 ];
 
 function CardContent({ diagram, typeInfo, onDelete }: { diagram: Diagram; typeInfo: typeof diagramTypes[number]; onDelete: () => void }) {

@@ -15,3 +15,11 @@ export interface TableDef {
   name: string;
   columns: ColumnDef[];
 }
+
+export interface RelationshipDef {
+  id: string;
+  sourceTable: string;
+  sourceField: string;
+  targetTable: string;
+  targetField: string;
+}

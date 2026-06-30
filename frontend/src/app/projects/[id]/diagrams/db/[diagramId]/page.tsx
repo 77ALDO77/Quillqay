@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useParams } from 'next/navigation';
 import { type TableDef } from '@/types/db-schema';
 import { SchemaProvider } from '@/context/schema-context';
 import { DiagramLayoutProvider } from '@/context/diagram-layout-context';
+import { StorageProvider } from '@/context/storage-context';
 import DbSchemaEditor from '@/components/projects/DbSchemaEditor';
 import DbDiagramSidebar from '@/components/projects/DbDiagramSidebar';
 
@@ -23,9 +25,12 @@ const defaultTables: TableDef[] = [
 ];
 
 export default function DbDiagramEditorPage() {
+  const params = useParams();
+  const diagramId = (params.diagramId as string) || 'default';
   const [tables, setTables] = useState<TableDef[]>(defaultTables);
 
   return (
+    <StorageProvider>
     <SchemaProvider tables={tables} onTablesChange={setTables}>
       <DiagramLayoutProvider>
         <aside
@@ -36,10 +41,11 @@ export default function DbDiagramEditorPage() {
         </aside>
         <div className="ml-[380px] h-full flex flex-col">
           <div className="flex-1 glass-panel rounded-2xl border border-white/10 overflow-hidden p-1">
-            <DbSchemaEditor />
+            <DbSchemaEditor diagramId={diagramId} />
           </div>
         </div>
       </DiagramLayoutProvider>
     </SchemaProvider>
+    </StorageProvider>
   );
 }

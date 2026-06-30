@@ -163,6 +163,52 @@ export function parseSchemaSql(input: string): TableDef[] {
   return tables;
 }
 
+export function parseSchemaDbml(input: string): { tables: TableDef[]; refs: Array<{ srcTable: string; srcField: string; tgtTable: string; tgtField: string }> } {
+  const clean = input.replace(/\/\/.*$/gm, '').trim();
+  const tables: TableDef[] = [];
+  const refs: Array<{ srcTable: string; srcField: string; tgtTable: string; tgtField: string }> = [];
+  resetCounter();
+
+  const tableRegex = /Table\s+(\w+)\s*\{([^}]*)\}/gi;
+  let match;
+
+  while ((match = tableRegex.exec(clean)) !== null) {
+    const tableName = match[1];
+    const body = match[2].trim();
+    const columns: ColumnDef[] = [];
+
+    const colLines = body.split('\n').map((l) => l.trim()).filter((l) => l);
+    for (const line of colLines) {
+      const parts = line.split(/\s+/);
+      if (parts.length < 2) continue;
+      const colName = parts[0];
+      const rest = parts.slice(1);
+      let colType = rest[0] || '';
+      let isPK = false;
+      let isFK = false;
+      let nullable = true;
+
+      const constraints = rest.slice(1).join(' ').toLowerCase();
+      if (constraints.includes('pk')) isPK = true;
+      if (constraints.includes('ref')) isFK = true;
+      if (constraints.includes('not null')) nullable = false;
+
+      colType = colType.replace(/\(.*?\)/, (m) => m).toUpperCase();
+
+      columns.push({ name: colName, type: colType, isPK, isFK, nullable });
+    }
+
+    tables.push({ id: nextId(), name: tableName, columns });
+  }
+
+  const refRegex = /Ref:\s*(\w+)\.(\w+)\s*>\s*(\w+)\.(\w+)/gi;
+  while ((match = refRegex.exec(clean)) !== null) {
+    refs.push({ srcTable: match[1], srcField: match[2], tgtTable: match[3], tgtField: match[4] });
+  }
+
+  return { tables, refs };
+}
+
 export const demoSchemas: Array<{ label: string; tables: TableDef[] }> = [
   {
     label: 'Current Project',

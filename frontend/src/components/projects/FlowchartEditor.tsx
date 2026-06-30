@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, type DragEvent } from 'react';
+import { useState, useCallback, useRef, type DragEvent } from 'react';
 import {
   ReactFlow,
   Handle,
@@ -118,26 +118,63 @@ function nextId() {
   return `fc_${++idCounter}`;
 }
 
-const defaultNodes: FlowNode[] = [
-  { id: nextId(), type: 'start', position: { x: 250, y: 25 }, data: { label: 'Start', nodeType: 'start' } },
-  { id: nextId(), type: 'process', position: { x: 200, y: 125 }, data: { label: 'Process', nodeType: 'process' } },
-  { id: nextId(), type: 'decision', position: { x: 175, y: 250 }, data: { label: 'Decision?', nodeType: 'decision' } },
-  { id: nextId(), type: 'io', position: { x: 200, y: 400 }, data: { label: 'Input/Output', nodeType: 'io' } },
-  { id: nextId(), type: 'end', position: { x: 250, y: 525 }, data: { label: 'End', nodeType: 'end' } },
-];
+const flowPresets: Record<string, { nodes: FlowNode[]; edges: FlowEdge[] }> = {
+  'auth-flow': {
+    nodes: [
+      { id: nextId(), type: 'start', position: { x: 280, y: 0 }, data: { label: 'Login Request', nodeType: 'start' } },
+      { id: nextId(), type: 'process', position: { x: 240, y: 100 }, data: { label: 'Validate Credentials', nodeType: 'process' } },
+      { id: nextId(), type: 'decision', position: { x: 200, y: 220 }, data: { label: 'Valid?', nodeType: 'decision' } },
+      { id: nextId(), type: 'process', position: { x: 20, y: 340 }, data: { label: 'Return Error', nodeType: 'process' } },
+      { id: nextId(), type: 'process', position: { x: 380, y: 340 }, data: { label: 'Generate Token', nodeType: 'process' } },
+      { id: nextId(), type: 'io', position: { x: 380, y: 460 }, data: { label: 'Send JWT Token', nodeType: 'io' } },
+      { id: nextId(), type: 'end', position: { x: 280, y: 580 }, data: { label: 'End', nodeType: 'end' } },
+    ],
+    edges: [
+      { id: 'fc-e1', source: 'fc_1', target: 'fc_2', type: 'smoothstep', animated: true, style: { stroke: '#4b5563', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563' } },
+      { id: 'fc-e2', source: 'fc_2', target: 'fc_3', type: 'smoothstep', animated: true, style: { stroke: '#4b5563', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563' } },
+      { id: 'fc-e3', source: 'fc_3', target: 'fc_4', sourceHandle: 'left', type: 'smoothstep', animated: true, style: { stroke: '#ef4444', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#ef4444' }, label: 'No', labelStyle: { fill: '#ef4444', fontSize: 11, fontWeight: 700 } },
+      { id: 'fc-e4', source: 'fc_3', target: 'fc_5', sourceHandle: 'bottom', type: 'smoothstep', animated: true, style: { stroke: '#34d399', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#34d399' }, label: 'Yes', labelStyle: { fill: '#34d399', fontSize: 11, fontWeight: 700 } },
+      { id: 'fc-e5', source: 'fc_5', target: 'fc_6', type: 'smoothstep', animated: true, style: { stroke: '#4b5563', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563' } },
+      { id: 'fc-e6', source: 'fc_6', target: 'fc_7', type: 'smoothstep', animated: true, style: { stroke: '#4b5563', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563' } },
+    ],
+  },
+  'payment-flow': {
+    nodes: [
+      { id: nextId(), type: 'start', position: { x: 300, y: 0 }, data: { label: 'Checkout', nodeType: 'start' } },
+      { id: nextId(), type: 'process', position: { x: 260, y: 100 }, data: { label: 'Validate Cart', nodeType: 'process' } },
+      { id: nextId(), type: 'decision', position: { x: 220, y: 220 }, data: { label: 'In Stock?', nodeType: 'decision' } },
+      { id: nextId(), type: 'process', position: { x: -30, y: 340 }, data: { label: 'Cancel Order', nodeType: 'process' } },
+      { id: nextId(), type: 'process', position: { x: 470, y: 340 }, data: { label: 'Process Payment', nodeType: 'process' } },
+      { id: nextId(), type: 'decision', position: { x: 470, y: 480 }, data: { label: 'Approved?', nodeType: 'decision' } },
+      { id: nextId(), type: 'process', position: { x: 470, y: 620 }, data: { label: 'Confirm Order', nodeType: 'process' } },
+      { id: nextId(), type: 'io', position: { x: 470, y: 740 }, data: { label: 'Send Confirmation', nodeType: 'io' } },
+      { id: nextId(), type: 'end', position: { x: 300, y: 860 }, data: { label: 'End', nodeType: 'end' } },
+    ],
+    edges: [
+      { id: 'fp-e1', source: 'fc_1', target: 'fc_2', type: 'smoothstep', animated: true, style: { stroke: '#4b5563', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563' } },
+      { id: 'fp-e2', source: 'fc_2', target: 'fc_3', type: 'smoothstep', animated: true, style: { stroke: '#4b5563', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563' } },
+      { id: 'fp-e3', source: 'fc_3', target: 'fc_4', sourceHandle: 'left', type: 'smoothstep', animated: true, style: { stroke: '#ef4444', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#ef4444' }, label: 'No', labelStyle: { fill: '#ef4444', fontSize: 11, fontWeight: 700 } },
+      { id: 'fp-e4', source: 'fc_3', target: 'fc_5', sourceHandle: 'bottom', type: 'smoothstep', animated: true, style: { stroke: '#34d399', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#34d399' }, label: 'Yes', labelStyle: { fill: '#34d399', fontSize: 11, fontWeight: 700 } },
+      { id: 'fp-e5', source: 'fc_5', target: 'fc_6', type: 'smoothstep', animated: true, style: { stroke: '#4b5563', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563' } },
+      { id: 'fp-e6', source: 'fc_6', target: 'fc_5', sourceHandle: 'left', type: 'smoothstep', animated: true, style: { stroke: '#ef4444', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#ef4444' }, label: 'Retry', labelStyle: { fill: '#ef4444', fontSize: 11, fontWeight: 700 } },
+      { id: 'fp-e7', source: 'fc_6', target: 'fc_7', sourceHandle: 'bottom', type: 'smoothstep', animated: true, style: { stroke: '#34d399', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#34d399' }, label: 'Yes', labelStyle: { fill: '#34d399', fontSize: 11, fontWeight: 700 } },
+      { id: 'fp-e8', source: 'fc_7', target: 'fc_8', type: 'smoothstep', animated: true, style: { stroke: '#4b5563', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563' } },
+      { id: 'fp-e9', source: 'fc_8', target: 'fc_9', type: 'smoothstep', animated: true, style: { stroke: '#4b5563', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563' } },
+    ],
+  },
+};
 
-const defaultEdges: FlowEdge[] = [
-  { id: 'e1', source: 'fc_1', target: 'fc_2', type: 'smoothstep', animated: true, style: { stroke: '#4b5563', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563' } },
-  { id: 'e2', source: 'fc_2', target: 'fc_3', type: 'smoothstep', animated: true, style: { stroke: '#4b5563', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563' } },
-  { id: 'e3', source: 'fc_3', target: 'fc_4', sourceHandle: 'bottom', type: 'smoothstep', animated: true, style: { stroke: '#4b5563', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563' }, label: 'Yes', labelStyle: { fill: '#34d399', fontSize: 11, fontWeight: 700 } },
-  { id: 'e4', source: 'fc_3', target: 'fc_5', sourceHandle: 'right', type: 'smoothstep', animated: true, style: { stroke: '#4b5563', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#4b5563' }, label: 'No', labelStyle: { fill: '#fb7185', fontSize: 11, fontWeight: 700 } },
-];
+const defaultNodes = flowPresets['auth-flow'].nodes;
+const defaultEdges = flowPresets['auth-flow'].edges;
 
 function EditorInner() {
   const reactFlowInstance = useReactFlow();
-  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(defaultNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>(defaultEdges);
+  const [activePreset, setActivePreset] = useState('auth-flow');
+  const preset = flowPresets[activePreset] || flowPresets['auth-flow'];
+  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(preset.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>(preset.edges);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const [showPresets, setShowPresets] = useState(false);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -169,7 +206,39 @@ function EditorInner() {
   );
 
   return (
-    <div ref={reactFlowWrapper} className="w-full h-full">
+    <div ref={reactFlowWrapper} className="w-full h-full relative">
+      {/* Preset selector */}
+      <div className="absolute top-3 left-3 z-10">
+        <div className="relative">
+          <button
+            onClick={() => setShowPresets(!showPresets)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container/90 backdrop-blur-md border border-white/10 text-xs font-medium text-on-surface-variant hover:bg-surface-container-high transition-colors"
+          >
+            <span>{activePreset === 'auth-flow' ? 'Auth Flow' : 'Payment Flow'}</span>
+          </button>
+          {showPresets && (
+            <div className="absolute top-full left-0 mt-1 w-40 rounded-xl bg-surface-container border border-white/10 shadow-xl backdrop-blur-xl overflow-hidden z-20">
+              {Object.keys(flowPresets).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    const p = flowPresets[key];
+                    setNodes(p.nodes);
+                    setEdges(p.edges);
+                    setActivePreset(key);
+                    setShowPresets(false);
+                    setTimeout(() => reactFlowInstance.fitView({ duration: 300 }), 50);
+                  }}
+                  className={`w-full text-left px-3 py-2 text-xs hover:bg-white/5 transition-colors ${activePreset === key ? 'text-primary bg-primary/5' : 'text-on-surface-variant'}`}
+                >
+                  {key === 'auth-flow' ? '🔐 Auth Flow' : '💳 Payment Flow'}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       <ReactFlow
         nodes={nodes}
         edges={edges}

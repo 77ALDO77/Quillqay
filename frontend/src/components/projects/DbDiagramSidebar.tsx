@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Table2, FileCode, GitBranch, Eye,
   Search, ChevronDown, ChevronRight,
   Key, ExternalLink, Copy, Check,
-  Plus, Trash2, X, GripVertical,
+  Plus, Trash2, X, GripVertical, Pencil, AlertCircle,
 } from 'lucide-react';
 import { useSchema } from '@/context/schema-context';
 import { useDiagramLayout } from '@/context/diagram-layout-context';
+import { parseSchemaDbml } from '@/lib/schema-parser';
+import MonacoEditor from './DbmlEditor';
 import type { SidebarSection } from '@/context/diagram-layout-context';
 
 const navItems: { icon: typeof Table2; label: string; id: SidebarSection }[] = [
@@ -259,8 +261,11 @@ function RefsSection() {
 /* ---------- DBML Section ---------- */
 
 function DbmlSection() {
-  const { tables } = useSchema();
+  const { tables, relationships, setAllTables, createRelationship } = useSchema();
   const [copied, setCopied] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editText, setEditText] = useState('');
+  const [error, setError] = useState('');
 
   const dbml = useMemo(() => {
     const lines: string[] = [];
@@ -277,8 +282,13 @@ function DbmlSection() {
       lines.push('}');
       lines.push('');
     }
+    for (const rel of relationships) {
+      lines.push(`Ref: ${rel.sourceTable}.${rel.sourceField} > ${rel.targetTable}.${rel.targetField}`);
+    }
     return lines.join('\n');
-  }, [tables]);
+  }, [tables, relationships]);
+
+  const lines = useMemo(() => dbml.split('\n'), [dbml]);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(dbml);
@@ -286,18 +296,110 @@ function DbmlSection() {
     setTimeout(() => setCopied(false), 2000);
   }, [dbml]);
 
+  const enterEditMode = useCallback(() => {
+    setEditText(dbml);
+    setEditMode(true);
+    setError('');
+  }, [dbml]);
+
+  const cancelEdit = useCallback(() => {
+    setEditMode(false);
+    setError('');
+  }, []);
+
+  const applyEdit = useCallback(() => {
+    try {
+      const parsed = parseSchemaDbml(editText);
+      if (parsed.tables.length === 0) { setError('No tables found in DBML'); return; }
+      setAllTables(parsed.tables);
+      for (const ref of parsed.refs) {
+        createRelationship(ref.srcTable, ref.srcField, ref.tgtTable, ref.tgtField);
+      }
+      setEditMode(false);
+      setError('');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to parse DBML');
+    }
+  }, [editText, setAllTables, createRelationship]);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  if (editMode) {
+    const content = (
+      <div className="flex-1 flex flex-col min-w-0">
+        <div className="px-3 pt-3 pb-2 border-b border-white/[0.06] flex items-center justify-between">
+          <span className="text-[10px] font-semibold text-on-surface-variant/50 uppercase tracking-wider">Edit DBML</span>
+          <div className="flex items-center gap-2">
+            <button onClick={cancelEdit} className="px-2.5 py-1.5 rounded-lg border border-white/10 text-[10px] font-medium text-on-surface-variant/50 hover:bg-white/[0.04] transition-all">
+              Cancel
+            </button>
+            <button onClick={applyEdit} className="px-2.5 py-1.5 rounded-lg bg-primary text-on-primary text-[10px] font-bold hover:saturate-150 transition-all">
+              Apply
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col min-h-0">
+          {mounted && (
+            <MonacoEditor
+              value={editText}
+              onChange={(v) => { setEditText(v ?? ''); setError(''); }}
+            />
+          )}
+          {!mounted && (
+            <div className="flex-1 flex items-center justify-center bg-surface-container-low rounded-xl m-3">
+              <span className="text-xs text-on-surface-variant/30">Loading editor...</span>
+            </div>
+          )}
+          {error && (
+            <div className="flex items-center gap-2 px-3 pb-2 text-xs text-error">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              {error}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+    return content;
+  }
+
   return (
     <div className="flex-1 flex flex-col min-w-0">
       <div className="px-3 pt-3 pb-2 border-b border-white/[0.06] flex items-center justify-between">
-        <span className="text-[10px] font-semibold text-on-surface-variant/50 uppercase tracking-wider">DBML Export</span>
-        <button onClick={handleCopy} className="flex items-center gap-1 px-2 py-1 rounded-lg border border-white/10 text-[10px] font-medium text-on-surface-variant/50 hover:bg-white/[0.04] transition-all">
-          {copied ? <><Check className="w-3 h-3 text-secondary" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
-        </button>
+        <span className="text-[10px] font-semibold text-on-surface-variant/50 uppercase tracking-wider">DBML</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={enterEditMode}
+            className="flex items-center gap-1 px-2 py-1.5 rounded-lg border border-white/10 text-[10px] font-medium text-on-surface-variant/50 hover:bg-white/[0.04] transition-all"
+          >
+            <Pencil className="w-3 h-3" /> Edit
+          </button>
+          <span className="text-[9px] text-on-surface-variant/25 font-mono">{lines.length} lines</span>
+          <button onClick={handleCopy} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-white/10 text-[10px] font-medium text-on-surface-variant/50 hover:bg-white/[0.04] transition-all">
+            {copied ? <><Check className="w-3 h-3 text-secondary" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
+          </button>
+        </div>
       </div>
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
-        <pre className="text-[11px] font-mono leading-relaxed whitespace-pre text-on-surface-variant/70">
-          {dbml}
-        </pre>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="p-3">
+          <pre className="text-[11px] font-mono leading-[1.8] whitespace-pre">
+            {lines.map((line, i) => {
+              let className = 'text-on-surface-variant/30';
+              let label: string | null = null;
+              if (/^Table\s/.test(line)) { className = 'text-primary font-bold'; label = 'table'; }
+              else if (/^Ref:/.test(line)) { className = 'text-secondary'; label = 'ref'; }
+              else if (/\[.*\]/.test(line)) { className = 'text-on-surface-variant/70'; }
+              else if (/^\s*\w/.test(line)) { className = 'text-on-surface-variant/60'; }
+              return (
+                <div key={i} className="flex hover:bg-white/[0.02] rounded px-1 -mx-1">
+                  <span className="w-8 shrink-0 text-right text-[9px] text-on-surface-variant/15 select-none mr-3 leading-[1.8]">{i + 1}</span>
+                  <span className={`${className} leading-[1.8]`}>{line}</span>
+                  {label && <span className="ml-auto shrink-0 text-[8px] font-bold uppercase tracking-widest text-on-surface-variant/20 leading-[1.8]">{label}</span>}
+                </div>
+              );
+            })}
+          </pre>
+        </div>
       </div>
     </div>
   );
