@@ -9,8 +9,8 @@ export interface EditorJsData {
 
 export interface Block {
     id: string;
-    type: 'header' | 'paragraph' | 'list' | 'checklist' | 'code';
-    data: any; // EditorJS specific data structure
+    type: string;
+    data: Record<string, unknown>;
 }
 
 export interface Page {

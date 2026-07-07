@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams, usePathname } from 'next/navigation';
 import {
   Terminal, Bell, LogOut, ArrowLeft,
-  StickyNote, FileText, GitBranch, Columns3,
+  StickyNote, FileText, GitBranch, Columns3, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 const sidebarLinks = [
   { href: 'notes', label: 'Notes', icon: StickyNote },
@@ -23,6 +23,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const id = params.id as string;
   const [mounted, setMounted] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const isDbDiagram = pathname.includes('/diagrams/db/');
   const isFlowchart = pathname.includes('/diagrams/flowchart/');
   const isWhiteboard = pathname.includes('/diagrams/whiteboard/');
@@ -91,28 +92,38 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
             className={`
               fixed z-40
               top-[104px] bottom-5 left-4
-              w-[240px] lg:w-[260px]
+              ${sidebarCollapsed ? 'w-[76px]' : 'w-[240px] lg:w-[260px]'}
               flex flex-col
               rounded-3xl
               border border-white/[0.12]
               shadow-[0_24px_80px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.05)_inset]
               backdrop-blur-2xl
-              transition-all duration-700 ease-out
+              transition-all duration-500 ease-out
               ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}
             `}
             style={SIDEBAR_BG}
           >
             <div className="absolute -inset-8 bg-primary/[0.04] rounded-[40px] blur-3xl pointer-events-none -z-10" />
             <div className="absolute inset-0 rounded-3xl pointer-events-none" style={SIDEBAR_INSET} />
+            <button
+              onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+              className="absolute -right-4 top-1/2 z-10 flex h-12 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-surface-container-high/95 text-on-surface-variant/60 shadow-[0_12px_28px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all hover:border-primary/30 hover:bg-surface-container-highest hover:text-primary hover:shadow-primary/10"
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            </button>
 
             <div className="p-5 border-b border-white/[0.06]">
-              <div className="flex items-center gap-2.5 mb-6">
-                <div className="w-8 h-8 bg-primary-container/80 rounded-xl flex items-center justify-center glow-accent">
-                  <Terminal className="w-4 h-4 text-on-primary-container" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-on-surface">Project</div>
-                  <div className="text-[10px] text-on-surface-variant/40 truncate max-w-[140px]">{id}</div>
+              <div className={`mb-6 flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between gap-2.5'}`}>
+                <div className={`flex min-w-0 items-center ${sidebarCollapsed ? 'justify-center' : 'gap-2.5'}`}>
+                  <div className="w-8 h-8 bg-primary-container/80 rounded-xl flex items-center justify-center glow-accent">
+                    <Terminal className="w-4 h-4 text-on-primary-container" />
+                  </div>
+                  <div className={sidebarCollapsed ? 'hidden' : 'min-w-0'}>
+                    <div className="text-xs font-bold text-on-surface">Project</div>
+                    <div className="text-[10px] text-on-surface-variant/40 truncate max-w-[140px]">{id}</div>
+                  </div>
                 </div>
               </div>
 
@@ -124,8 +135,9 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
                       key={link.href}
                       href={`/projects/${id}/${link.href}`}
                       className={`
-                        flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium
+                        flex items-center rounded-xl text-sm font-medium
                         transition-all duration-500 ease-out
+                        ${sidebarCollapsed ? 'justify-center px-0 py-3' : 'gap-3 px-4 py-2.5'}
                         ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
                         ${isActive
                           ? 'text-primary bg-primary/[0.1] scale-[1.02]'
@@ -133,10 +145,11 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
                         }
                       `}
                       style={{ transitionDelay: `${200 + i * 60}ms` }}
+                      title={sidebarCollapsed ? link.label : undefined}
                     >
                       <link.icon className={`w-4 h-4 transition-colors ${isActive ? 'text-primary' : ''}`} />
-                      <span>{link.label}</span>
-                      {isActive && (
+                      <span className={sidebarCollapsed ? 'sr-only' : ''}>{link.label}</span>
+                      {isActive && !sidebarCollapsed && (
                         <div className="ml-auto w-1 h-4 rounded-full bg-primary shadow-[0_0_8px_rgba(214,186,255,0.5)]" />
                       )}
                     </Link>
@@ -149,22 +162,23 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
                 <Link
                 href="/login"
                 className={`
-                  flex items-center gap-3 px-4 py-2.5 rounded-xl
+                  flex items-center rounded-xl
                   text-on-surface-variant/40 hover:bg-white/[0.04] hover:text-on-surface-variant/70
                   transition-all duration-500 ease-out text-xs
+                  ${sidebarCollapsed ? 'justify-center px-0 py-3' : 'gap-3 px-4 py-2.5'}
                   ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
                 `}
                 style={{ transitionDelay: '600ms' }}
                 aria-label="Sign out"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out</span>
+                <span className={sidebarCollapsed ? 'sr-only' : ''}>Sign Out</span>
               </Link>
             </div>
           </aside>
 
           {/* ============ CONTENT AREA (pushed by sidebar) ============ */}
-          <div className="fixed inset-x-0 bottom-0 top-[84px] flex flex-col overflow-hidden md:ml-[256px] lg:ml-[276px]">
+          <div className={`fixed inset-x-0 bottom-0 top-[84px] flex flex-col overflow-hidden transition-all duration-500 ease-out ${sidebarCollapsed ? 'md:ml-[92px]' : 'md:ml-[256px] lg:ml-[276px]'}`}>
             <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 pb-5 md:p-5">
               {children}
             </main>

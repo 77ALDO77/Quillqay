@@ -93,52 +93,297 @@ body {
   border-radius: 10px;
 }
 
-/* EditorJS Custom Styles to fix Tailwind Reset conflicts */
-.codex-editor .cdx-list {
-  padding-left: 2rem !important;
+/* EditorJS document surface */
+.document-editor-shell .codex-editor {
+  color: var(--foreground);
+}
+
+.document-editor-shell .codex-editor__redactor {
+  padding: 0 0 240px !important;
+}
+
+.document-editor-shell .ce-block__content,
+.document-editor-shell .ce-toolbar__content {
+  max-width: 980px;
+}
+
+.document-editor-shell .ce-paragraph {
+  color: rgba(229, 225, 228, 0.86);
+  font-size: 1rem;
+  line-height: 1.85;
+}
+
+.document-editor-shell .ce-paragraph[data-placeholder]:empty::before {
+  color: rgba(150, 141, 160, 0.68);
+}
+
+.document-editor-shell .ce-header {
+  color: #f5f2f5;
+  padding: 0.35rem 0 0.5rem;
+  letter-spacing: 0;
+}
+
+.document-editor-shell h1.ce-header {
+  font-size: clamp(2.4rem, 5vw, 4.5rem);
+  line-height: 1.05;
+  margin: 0.1rem 0 1.3rem;
+  padding-bottom: 0.25rem;
+}
+
+.document-editor-shell h2.ce-header {
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+.document-editor-shell h3.ce-header {
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
+.document-editor-shell .cdx-list {
+  color: rgba(229, 225, 228, 0.86);
+  padding-left: 1.6rem !important;
+}
+
+.document-editor-shell .cdx-list--unordered {
   list-style: disc !important;
 }
 
-.codex-editor .cdx-list--ordered {
+.document-editor-shell .cdx-list--ordered {
   list-style: decimal !important;
 }
 
-.codex-editor .cdx-list__item {
-  padding: 0.25rem 0;
-  line-height: 1.6;
+.document-editor-shell .cdx-list__item {
+  line-height: 1.75;
+  padding: 0.18rem 0;
 }
 
-/* Checklist Styles */
-.codex-editor .cdx-checklist__item {
-  display: flex !important;
+.document-editor-shell .cdx-checklist__item {
   align-items: flex-start;
-  padding: 0.5rem 0;
+  border-radius: 0.75rem;
+  display: flex !important;
+  padding: 0.45rem 0.35rem;
 }
 
-.codex-editor .cdx-checklist__item-checkbox {
-  border: 1px solid #4b5563 !important; /* gray-600 */
-  border-radius: 4px !important;
-  width: 1.25rem !important;
-  height: 1.25rem !important;
-  margin-right: 0.75rem !important;
-  flex-shrink: 0;
+.document-editor-shell .cdx-checklist__item:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.document-editor-shell .cdx-checklist__item-checkbox {
   background-color: transparent !important;
+  border: 1px solid rgba(205, 194, 215, 0.35) !important;
+  border-radius: 0.35rem !important;
   cursor: pointer;
+  flex-shrink: 0;
+  height: 1.15rem !important;
+  margin-right: 0.75rem !important;
+  margin-top: 0.2rem;
+  width: 1.15rem !important;
 }
 
-.codex-editor .cdx-checklist__item--checked .cdx-checklist__item-checkbox {
-  background-color: #a855f7 !important; /* purple-500 */
-  border-color: #a855f7 !important;
+.document-editor-shell .cdx-checklist__item--checked .cdx-checklist__item-checkbox {
+  background-color: #d6baff !important;
+  border-color: #d6baff !important;
 }
 
-/* Typography Enhancements */
-.ce-header {
-  padding-bottom: 0.5rem;
-  color: #fff;
+.document-editor-shell .ce-code__textarea {
+  background: #0e0e10 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 1rem !important;
+  color: #d3fbff !important;
+  font-family: var(--font-geist-mono), monospace !important;
+  min-height: 140px;
 }
-.ce-paragraph {
-  line-height: 1.6em;
-  color: #d1d5db; /* gray-300 */
+
+.document-editor-shell .notion-placeholder-block {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  margin: 0.45rem 0;
+  padding: 0.9rem 1rem;
+}
+
+.document-editor-shell .notion-placeholder-block__label {
+  color: #d6baff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+}
+
+.document-editor-shell .notion-placeholder-block__body {
+  color: rgba(229, 225, 228, 0.86);
+  min-height: 1.7rem;
+  outline: none;
+}
+
+.document-editor-shell .notion-placeholder-block__body:empty::before {
+  color: rgba(150, 141, 160, 0.62);
+  content: attr(data-placeholder);
+}
+
+.document-editor-shell .ce-toolbar__plus,
+.document-editor-shell .ce-toolbar__settings-btn {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(205, 194, 215, 0.78);
+}
+
+.document-editor-shell .ce-toolbar__actions {
+  padding-right: 8px;
+}
+
+.document-editor-shell .ce-toolbar__plus:hover,
+.document-editor-shell .ce-toolbar__settings-btn:hover,
+.document-editor-shell .ce-toolbox__button:hover {
+  background: rgba(214, 186, 255, 0.12);
+  color: #d6baff;
+}
+
+.document-editor-shell .ce-popover,
+.document-editor-shell .ce-conversion-toolbar,
+.document-editor-shell .ce-inline-toolbar {
+  background: rgba(28, 27, 29, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  color: #e5e1e4;
+}
+
+.document-editor-shell .ce-popover__search {
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  color: #e5e1e4;
+}
+
+.document-editor-shell .ce-popover-item {
+  border-radius: 0.75rem;
+  color: #e5e1e4;
+}
+
+.document-editor-shell .ce-popover-item:hover,
+.document-editor-shell .ce-popover-item--focused {
+  background: rgba(214, 186, 255, 0.12) !important;
+}
+
+.document-editor-shell .ce-popover-item__icon {
+  background: rgba(255, 255, 255, 0.055);
+  color: #d6baff;
+}
+
+.document-editor-shell .ce-inline-tool,
+.document-editor-shell .ce-conversion-tool {
+  color: rgba(229, 225, 228, 0.82);
+}
+
+.document-editor-shell .ce-inline-tool:hover,
+.document-editor-shell .ce-inline-tool--active,
+.document-editor-shell .ce-conversion-tool:hover {
+  background: rgba(214, 186, 255, 0.12);
+  color: #d6baff;
+}
+
+.document-editor-shell .ce-block--selected .ce-block__content {
+  background: rgba(214, 186, 255, 0.08);
+  border-radius: 0.75rem;
+}
+
+/* EditorJS popovers are mounted outside the editor shell, so they need global theme overrides. */
+.ce-popover {
+  --border-radius: 14px;
+  --width: 280px;
+  --max-height: 360px;
+  --padding: 8px;
+  --color-background: rgba(28, 27, 29, 0.98);
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-shadow: rgba(0, 0, 0, 0.45);
+  --color-text-primary: #e5e1e4;
+  --color-text-secondary: rgba(205, 194, 215, 0.58);
+  --color-border-icon: rgba(255, 255, 255, 0.1);
+  --color-background-item-hover: rgba(255, 255, 255, 0.07);
+  --color-background-item-focus: rgba(214, 186, 255, 0.13);
+  --color-background-icon-active: rgba(214, 186, 255, 0.13);
+  --color-text-icon-active: #d6baff;
+}
+
+.ce-popover__container {
+  backdrop-filter: blur(18px);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55) !important;
+}
+
+.ce-popover--opened > .ce-popover__container {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.ce-popover__items::-webkit-scrollbar {
+  width: 5px;
+}
+
+.ce-popover__items::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ce-popover__items::-webkit-scrollbar-thumb {
+  background: rgba(214, 186, 255, 0.28);
+  border-radius: 999px;
+}
+
+.ce-popover-item {
+  color: #e5e1e4 !important;
+  min-height: 34px;
+}
+
+.ce-popover-item__title {
+  color: #e5e1e4 !important;
+  font-weight: 600;
+}
+
+.ce-popover-item__secondary-title {
+  color: rgba(205, 194, 215, 0.48) !important;
+  letter-spacing: 0;
+}
+
+.ce-popover-item__icon {
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.55rem;
+  color: #d6baff;
+}
+
+.ce-popover-item--focused:not(.ce-popover-item--no-focus),
+.ce-popover-item:hover:not(.ce-popover-item--no-hover) {
+  background: rgba(214, 186, 255, 0.13) !important;
+}
+
+.ce-popover-item--disabled {
+  opacity: 0.42;
+}
+
+.cdx-search-field {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 0.8rem !important;
+}
+
+.cdx-search-field__input {
+  color: #e5e1e4 !important;
+}
+
+.cdx-search-field__input::placeholder {
+  color: rgba(205, 194, 215, 0.52) !important;
+}
+
+.cdx-search-field__icon svg {
+  color: rgba(205, 194, 215, 0.62) !important;
+}
+
+.ce-inline-toolbar,
+.ce-conversion-toolbar {
+  background: rgba(28, 27, 29, 0.98) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #e5e1e4 !important;
 }
 
 /* View Transitions */
