@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Handle, Position, useConnection, type Node, type NodeProps } from '@xyflow/react';
 import { Key, ChevronDown, ChevronUp } from 'lucide-react';
 import {
-  LEFT_SOURCE_PREFIX, RIGHT_SOURCE_PREFIX, TARGET_PREFIX,
+  RIGHT_SOURCE_PREFIX, TARGET_PREFIX,
 } from '@/lib/handle-constants';
 
 const TABLE_REL_SOURCE = 'table_rel_source_';
@@ -26,17 +26,12 @@ interface DbTableData extends Record<string, unknown> {
 
 export type DbTableNodeType = Node<DbTableData, 'demoTable'>;
 
-const ROW_H = 30;
-const HEADER_H = 38;
-
 function TableFieldRow({
-  field, index, focused,
+  field, focused,
 }: {
   field: FieldDef;
-  index: number;
   focused: boolean;
 }) {
-  const yOffset = HEADER_H + index * ROW_H + ROW_H / 2;
   return (
     <div className="h-[30px] flex items-center px-3 text-xs relative hover:bg-white/[0.02] transition-colors">
       <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -52,21 +47,16 @@ function TableFieldRow({
         {field.nullable && <span className="text-outline-variant/40 text-[8px] font-medium">NULL</span>}
       </div>
 
-      <Handle type="source" position={Position.Left}
-        id={`${LEFT_SOURCE_PREFIX}${field.name}`}
-        style={{ top: yOffset, background: '#d3fbff', border: '2px solid #201f21', width: 7, height: 7 }}
-        className={focused ? '' : '!invisible'}
-      />
       <Handle type="source" position={Position.Right}
         id={`${RIGHT_SOURCE_PREFIX}${field.name}`}
-        style={{ top: yOffset, background: '#d3fbff', border: '2px solid #201f21', width: 7, height: 7 }}
-        className={focused ? '' : '!invisible'}
+        style={{ top: '50%', transform: 'translate(50%, -50%)', background: '#d3fbff', border: '2px solid #201f21', width: 10, height: 10 }}
+        className={`${focused ? '!opacity-100' : '!opacity-0'} shadow-[0_0_0_4px_rgba(211,251,255,0.08)] transition-opacity`}
       />
       {field.isPK && (
         <Handle type="target" position={Position.Left}
           id={`${TARGET_PREFIX}0_${field.name}`}
-          style={{ top: yOffset, background: '#d6baff', border: '2px solid #201f21', width: 7, height: 7 }}
-          className="!invisible"
+          style={{ top: '50%', transform: 'translate(-50%, -50%)', background: '#d6baff', border: '2px solid #201f21', width: 10, height: 10 }}
+          className={`${focused ? '!opacity-100' : '!opacity-0'} shadow-[0_0_0_4px_rgba(214,186,255,0.08)] transition-opacity`}
         />
       )}
     </div>
@@ -114,8 +104,8 @@ export function DbTableNode({ data, selected, id }: NodeProps<DbTableNodeType>) 
       </div>
 
       <div>
-        {visibleFields.map((field, i) => (
-          <TableFieldRow key={field.name} field={field} index={i} focused={focused} />
+        {visibleFields.map((field) => (
+          <TableFieldRow key={field.name} field={field} focused={focused} />
         ))}
       </div>
 

@@ -6,7 +6,6 @@ import {
   Handle,
   Position,
   Background,
-  MarkerType,
   BackgroundVariant,
   useNodesState,
   useEdgesState,
@@ -14,16 +13,17 @@ import {
   ReactFlowProvider,
   useOnViewportChange,
   type Node,
-  type Edge,
   type NodeProps,
   type Connection,
+  type NodeChange,
+  type EdgeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Key, ExternalLink, Upload, Database, X, Code, FileJson, CheckCircle, AlertCircle, ZoomIn, ZoomOut, Scan, Undo, Redo, Table2, GitBranch, Pencil, Copy, Trash2, Save, Download } from 'lucide-react';
 import type { TableDef } from '@/types/db-schema';
 import { useSchema } from '@/context/schema-context';
 import { useDiagramLayout } from '@/context/diagram-layout-context';
-import { parseSchemaJson, parseSchemaSql, demoSchemas } from '@/lib/schema-parser';
+import { parseSchemaJson, parseSchemaSql } from '@/lib/schema-parser';
 import DbCanvasContextMenu, { type ContextMenuAction } from './DbCanvasContextMenu';
 import { RelationshipEdge, type RelEdge } from './RelationshipEdge';
 import MarkerDefinitions from './MarkerDefinitions';
@@ -32,20 +32,17 @@ import { exportSQL } from '@/lib/sql-export';
 import { TableSchemaDialog } from '@/dialogs/table-schema-dialog';
 import { AreaNode, type AreaNodeType } from './AreaNode';
 import { DbTableNode, type DbTableNodeType } from './DbTableNode';
-import { demoAreas, demoTables, demoRelationships as demoRels } from '@/lib/demo-schema-data';
-import type { DemoRelationship } from '@/lib/demo-schema-data';
 import { sourceHandle, targetHandle } from '@/lib/handle-constants';
-
-const HEADER_H = 44;
-const ROW_H = 34;
 
 interface TableNodeData extends Record<string, unknown> {
   table: TableDef;
 }
 
 type TableFlowNode = Node<TableNodeData, 'tableNode'>;
+type SchemaFlowNode = TableFlowNode | AreaNodeType | DbTableNodeType;
+type SchemaNodeData = Partial<TableNodeData> & { label?: string };
 
-function buildNodes(tables: TableDef[]): TableFlowNode[] {
+function buildNodes(tables: TableDef[]): SchemaFlowNode[] {
   const cols = Math.ceil(Math.sqrt(tables.length));
   let idCounter = 0;
   return tables.map((table, i) => {
@@ -59,6 +56,20 @@ function buildNodes(tables: TableDef[]): TableFlowNode[] {
   });
 }
 
+function getSchemaNodeData(node?: Node): SchemaNodeData {
+  return (node?.data ?? {}) as SchemaNodeData;
+}
+
+function getSchemaNodeName(node?: Node) {
+  const data = getSchemaNodeData(node);
+  return data.table?.name ?? data.label;
+}
+
+function getSchemaNodeKey(node?: Node) {
+  const data = getSchemaNodeData(node);
+  return data.table?.id ?? data.table?.name ?? data.label;
+}
+
 function TableNode({ data, selected }: NodeProps<TableFlowNode>) {
   const { table } = data;
 
@@ -68,8 +79,7 @@ function TableNode({ data, selected }: NodeProps<TableFlowNode>) {
         <span className="text-sm font-bold text-primary tracking-tight">{table.name}</span>
       </div>
       <div className="divide-y divide-white/5">
-        {table.columns.map((col, i) => {
-          const yOffset = HEADER_H + i * ROW_H + ROW_H / 2;
+        {table.columns.map((col) => {
           return (
             <div key={col.name} className="h-[34px] flex items-center px-4 text-xs relative hover:bg-white/[0.02] transition-colors">
               <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -89,21 +99,20 @@ function TableNode({ data, selected }: NodeProps<TableFlowNode>) {
                 )}
               </div>
 
-              {/* Source handle — LEFT */}
-              <Handle
-                type="source"
-                position={Position.Left}
-                id={`left_rel_${col.name}`}
-                style={{ top: yOffset, background: '#d3fbff', border: '2px solid #201f21', width: 7, height: 7 }}
-                className={`!invisible group-hover:!visible transition-opacity`}
-              />
               {/* Source handle — RIGHT */}
               <Handle
                 type="source"
                 position={Position.Right}
                 id={`right_rel_${col.name}`}
-                style={{ top: yOffset, background: '#d3fbff', border: '2px solid #201f21', width: 7, height: 7 }}
-                className={`!invisible group-hover:!visible transition-opacity`}
+                style={{
+                  top: '50%',
+                  transform: 'translate(50%, -50%)',
+                  background: col.isFK ? '#d3fbff' : '#cdc2d7',
+                  border: '2px solid #201f21',
+                  width: 10,
+                  height: 10,
+                }}
+                className="!opacity-0 shadow-[0_0_0_4px_rgba(211,251,255,0.08)] transition-opacity group-hover:!opacity-100"
               />
               {/* Target handle — only for PK columns */}
               {col.isPK && (
@@ -111,8 +120,15 @@ function TableNode({ data, selected }: NodeProps<TableFlowNode>) {
                   type="target"
                   position={Position.Left}
                   id={`target_rel_0_${col.name}`}
-                  style={{ top: yOffset, background: '#d6baff', border: '2px solid #201f21', width: 7, height: 7 }}
-                  className="!invisible"
+                  style={{
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    background: '#d6baff',
+                    border: '2px solid #201f21',
+                    width: 10,
+                    height: 10,
+                  }}
+                  className="!opacity-0 shadow-[0_0_0_4px_rgba(214,186,255,0.08)] transition-opacity group-hover:!opacity-100"
                 />
               )}
             </div>
@@ -130,12 +146,12 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
   const { tables: contextTables, relationships, createRelationship, removeRelationship, setAllTables, addTable, removeTable } = useSchema();
   const { selectSection } = useDiagramLayout();
   const reactFlowInstance = useReactFlow();
-  const [nodes, setNodes, onNodesChange] = useNodesState<TableFlowNode>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<SchemaFlowNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<RelEdge>([]);
   const [zoomLevel, setZoomLevel] = useState('100%');
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
-  const historyRef = useRef<{ past: TableFlowNode[][]; future: TableFlowNode[][] }>({ past: [], future: [] });
+  const historyRef = useRef<{ past: SchemaFlowNode[][]; future: SchemaFlowNode[][] }>({ past: [], future: [] });
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuAction[] } | null>(null);
 
   useOnViewportChange({
@@ -146,7 +162,7 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
   const nodeIdByTable = useMemo(() => {
     const map = new Map<string, string>();
     for (const node of nodes) {
-      const tableName = (node.data as TableNodeData).table?.name;
+      const tableName = getSchemaNodeData(node).table?.name;
       if (tableName) map.set(tableName, node.id);
     }
     return map;
@@ -171,22 +187,22 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
     setEdges(newEdges);
   }, [relationships, nodeIdByTable, setEdges]);
 
-  const pushHistory = useCallback((prevNodes: TableFlowNode[]) => {
+  const pushHistory = useCallback((prevNodes: SchemaFlowNode[]) => {
     historyRef.current.past.push(prevNodes);
     historyRef.current.future = [];
     setCanUndo(true);
     setCanRedo(false);
   }, []);
 
-  const handleNodesChange = useCallback((changes: any[]) => {
+  const handleNodesChange = useCallback((changes: NodeChange<SchemaFlowNode>[]) => {
     const hasDragged = changes.some((c) => c.type === 'position' && c.dragging === false);
     if (hasDragged) pushHistory(nodes);
     onNodesChange(changes);
   }, [nodes, pushHistory, onNodesChange]);
 
-  const handleEdgesChange = useCallback((changes: any[]) => {
-    const removed = changes.filter((c: any) => c.type === 'remove');
-    removed.forEach((c: any) => removeRelationship(c.id));
+  const handleEdgesChange = useCallback((changes: EdgeChange<RelEdge>[]) => {
+    const removed = changes.filter((c) => c.type === 'remove');
+    removed.forEach((c) => removeRelationship(c.id));
     onEdgesChange(changes);
   }, [onEdgesChange, removeRelationship]);
 
@@ -231,7 +247,8 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
   }, [setNodes, reactFlowInstance, createRelationship]);
 
   useEffect(() => {
-    loadTables(contextTables);
+    const timeoutId = window.setTimeout(() => loadTables(contextTables), 0);
+    return () => window.clearTimeout(timeoutId);
   }, [contextTables, loadTables]);
 
   // onConnect: create relationship from drag
@@ -245,8 +262,8 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
     if (!srcField || !tgtField) return;
     const sourceNode = nodes.find((n) => n.id === params.source);
     const targetNode = nodes.find((n) => n.id === params.target);
-    const sourceTable = sourceNode?.data?.table?.name || (sourceNode?.data as any)?.label;
-    const targetTable = targetNode?.data?.table?.name || (targetNode?.data as any)?.label;
+    const sourceTable = getSchemaNodeName(sourceNode);
+    const targetTable = getSchemaNodeName(targetNode);
     if (!sourceTable || !targetTable) return;
     createRelationship(sourceTable, srcField, targetTable, tgtField);
   }, [nodes, createRelationship]);
@@ -256,17 +273,6 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
   const [importSuccess, setImportSuccess] = useState(false);
-  const [activeSchema, setActiveSchema] = useState('Current Project');
-  const [showSchemaMenu, setShowSchemaMenu] = useState(false);
-
-  const handleSelectDemo = useCallback((label: string) => {
-    const schema = demoSchemas.find((s) => s.label === label);
-    if (schema) {
-      setAllTables(schema.tables.map((t, i) => ({ ...t, id: `t${i + 1}` })));
-      setActiveSchema(label);
-      setShowSchemaMenu(false);
-    }
-  }, [setAllTables]);
 
   const handleImport = useCallback(() => {
     setImportError('');
@@ -278,7 +284,6 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
       if (parsed.length === 0) { setImportError('No tables found in input'); return; }
       setAllTables(parsed);
       setImportSuccess(true);
-      setActiveSchema('(imported)');
       setTimeout(() => setShowImport(false), 800);
     } catch (e: unknown) {
       setImportError(e instanceof Error ? e.message : 'Failed to parse schema');
@@ -287,10 +292,10 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
 
   // Table Schema Dialog
   const [schemaDialogOpen, setSchemaDialogOpen] = useState(false);
-  const [editingTable, setEditingTable] = useState<TableDef | undefined>(undefined);
+  const [editingTable] = useState<TableDef | undefined>(undefined);
 
   // Persistence
-  const { save, load } = useDiagramPersistence(diagramId || 'default');
+  const { save } = useDiagramPersistence(diagramId || 'default');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const handleSave = useCallback(async () => {
@@ -309,127 +314,37 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
     navigator.clipboard.writeText(sql);
   }, [contextTables, relationships]);
 
-  // Auto-load saved data on mount
-  useEffect(() => {
-    load().then((data) => {
-      if (data) setActiveSchema('(saved)');
-    });
-  }, []);
-
   const importPlaceholder = importMode === 'json'
     ? '[{"name":"users","columns":[{"name":"id","type":"UUID","isPK":true}]}]'
     : 'CREATE TABLE users (\n  id UUID PRIMARY KEY,\n  email VARCHAR(255) NOT NULL\n);';
 
-  const loadDemoData = useCallback(() => {
-    const flowNodes: any[] = [];
-
-    // Add area nodes
-    for (const area of demoAreas) {
-      flowNodes.push({
-        id: area.id,
-        type: 'area',
-        position: area.position,
-        data: { label: area.label, color: area.color },
-        style: { width: area.size.width, height: area.size.height },
-        zIndex: -10,
-        draggable: true,
-        selectable: true,
-      });
-    }
-
-    // Add table nodes
-    for (const table of demoTables) {
-      flowNodes.push({
-        id: table.id,
-        type: 'demoTable',
-        position: { x: table.position.x, y: table.position.y },
-        data: { label: table.name, fields: table.fields, color: table.color },
-        parentId: table.parentId,
-        extent: table.parentId ? 'parent' as const : undefined,
-        draggable: true,
-        selectable: true,
-      });
-    }
-
-    setNodes(flowNodes as any);
-
-    // Create edges from demo relationships
-    const flowEdges: RelEdge[] = demoRels.map((rel: DemoRelationship) => ({
-      id: rel.id,
-      source: rel.sourceTable,
-      target: rel.targetTable,
-      sourceHandle: sourceHandle(rel.sourceField, 'right'),
-      targetHandle: targetHandle(rel.targetField, 0),
-      type: 'relationship-edge',
-      data: {
-        relationship: {
-          id: rel.id,
-          sourceTable: rel.sourceTable,
-          sourceField: rel.sourceField,
-          targetTable: rel.targetTable,
-          targetField: rel.targetField,
-        },
-      },
-    }));
-    setEdges(flowEdges);
-
-    historyRef.current = { past: [], future: [] };
-    setCanUndo(false);
-    setCanRedo(false);
-    setTimeout(() => reactFlowInstance.fitView({ duration: 300 }), 100);
-  }, [setNodes, setEdges, reactFlowInstance]);
-
   const zoomDuration = 200;
 
   return (
-    <div className="w-full h-full relative">
+    <div className="relative h-full w-full min-w-0 overflow-hidden rounded-[20px] bg-surface-container-lowest/85">
       {/* Top toolbar */}
-      <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
-        <div className="relative">
-          <button
-            onClick={() => setShowSchemaMenu(!showSchemaMenu)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container/90 backdrop-blur-md border border-white/10 text-xs font-medium text-on-surface-variant hover:bg-surface-container-high transition-colors"
-          >
-            <Database className="w-3.5 h-3.5 text-primary" />
-            <span className="max-w-[120px] truncate">{activeSchema}</span>
-          </button>
-          {showSchemaMenu && (
-            <div className="absolute top-full left-0 mt-1 w-44 rounded-xl bg-surface-container border border-white/10 shadow-xl backdrop-blur-xl overflow-hidden z-20">
-              <button
-                onClick={() => { loadDemoData(); setActiveSchema('ChartDB Demo'); setShowSchemaMenu(false); }}
-                className="w-full text-left px-3 py-2 text-xs hover:bg-white/5 transition-colors text-on-surface-variant"
-              >
-                🗄️ ChartDB Demo
-              </button>
-              {demoSchemas.map((s) => (
-                <button
-                  key={s.label}
-                  onClick={() => handleSelectDemo(s.label)}
-                  className={`w-full text-left px-3 py-2 text-xs hover:bg-white/5 transition-colors ${activeSchema === s.label ? 'text-primary bg-primary/5' : 'text-on-surface-variant'}`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          )}
+      <div className="absolute left-4 right-4 top-4 z-10 flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/[0.08] px-3 py-2 text-xs font-bold text-on-surface backdrop-blur-xl">
+          <Database className="h-3.5 w-3.5 text-primary" />
+          Project schema
         </div>
         <button
           onClick={() => { setShowImport(true); setImportError(''); setImportSuccess(false); setImportText(''); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container/90 backdrop-blur-md border border-white/10 text-xs font-medium text-on-surface-variant hover:bg-surface-container-high transition-colors"
+          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-surface-container/85 px-3 py-2 text-xs font-bold text-on-surface-variant backdrop-blur-xl transition-colors hover:bg-surface-container-high hover:text-on-surface"
         >
           <Upload className="w-3.5 h-3.5 text-secondary" />
           Import Schema
         </button>
         <button
           onClick={handleSave}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container/90 backdrop-blur-md border border-white/10 text-xs font-medium text-on-surface-variant hover:bg-surface-container-high transition-colors"
+          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-surface-container/85 px-3 py-2 text-xs font-bold text-on-surface-variant backdrop-blur-xl transition-colors hover:bg-surface-container-high hover:text-on-surface"
         >
           <Save className="w-3.5 h-3.5 text-secondary" />
           {saveStatus === 'saved' ? 'Saved!' : 'Save'}
         </button>
         <button
           onClick={handleExportSQL}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container/90 backdrop-blur-md border border-white/10 text-xs font-medium text-on-surface-variant hover:bg-surface-container-high transition-colors"
+          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-surface-container/85 px-3 py-2 text-xs font-bold text-on-surface-variant backdrop-blur-xl transition-colors hover:bg-surface-container-high hover:text-on-surface"
         >
           <Download className="w-3.5 h-3.5 text-primary" />
           SQL
@@ -463,12 +378,14 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
         }}
         onNodeContextMenu={(e, node) => {
           e.preventDefault();
-          const tableIndex = contextTables.findIndex((t) => (t.id || t.name) === ((node.data as any).table?.id || (node.data as any).table?.name));
+          const tableKey = getSchemaNodeKey(node);
+          const tableName = getSchemaNodeName(node);
+          const tableIndex = contextTables.findIndex((t) => (t.id || t.name) === tableKey);
           setContextMenu({
             x: e.clientX, y: e.clientY,
             items: [
               { id: 'edit', label: 'Edit Table', icon: Pencil, onSelect: () => { selectSection('tables'); } },
-              { id: 'duplicate', label: 'Duplicate Table', icon: Copy, onSelect: () => { addTable(`${(node.data as any).table?.name}_copy`); } },
+              { id: 'duplicate', label: 'Duplicate Table', icon: Copy, onSelect: () => { if (tableName) addTable(`${tableName}_copy`); } },
               { id: 'delete', label: 'Delete Table', icon: Trash2, danger: true, onSelect: () => { if (tableIndex >= 0) removeTable(tableIndex); } },
             ],
           });
