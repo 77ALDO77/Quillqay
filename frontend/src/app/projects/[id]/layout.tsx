@@ -36,12 +36,12 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
   const currentSection = sidebarLinks.find((link) => pathname.includes(`/${link.href}`))?.href || 'notes';
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#1c1b1d_0%,#131315_100%)] text-on-surface font-display">
+    <div className="relative h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,#1c1b1d_0%,#131315_100%)] text-on-surface font-display">
       <div className="fixed top-[-10%] left-[10%] w-[40vw] h-[40vw] bg-primary/5 rounded-full blur-[120px] pointer-events-none z-0" />
       <div className="fixed bottom-[-10%] right-[-5%] w-[30vw] h-[30vw] bg-secondary/3 rounded-full blur-[100px] pointer-events-none z-0" />
 
       {/* ============ FLOATING NAVBAR ============ */}
-      <header className="sticky top-0 z-50 relative flex justify-between items-center px-4 md:px-6 py-3 mt-4 mx-4 rounded-2xl border border-white/[0.12] backdrop-blur-2xl shadow-[0_24px_50px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.04)_inset]"         style={NAVBAR_BG}>
+      <header className="fixed left-4 right-4 top-4 z-50 flex items-center justify-between rounded-2xl border border-white/[0.12] px-4 py-3 shadow-[0_24px_50px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.04)_inset] backdrop-blur-2xl md:px-6" style={NAVBAR_BG}>
         <div className="absolute -inset-4 bg-primary/[0.04] rounded-[20px] blur-2xl pointer-events-none -z-10" />
         <div className="flex items-center gap-3">
           <Link
@@ -78,8 +78,8 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
       {isDiagramEditor ? (
         <>
           {/* ============ CONTENT AREA (full width, page renders sidebar) ============ */}
-          <div className="h-[calc(100vh-60px)] flex flex-col">
-            <main className="flex-1 p-4 md:p-6 pb-4">
+          <div className="fixed inset-x-0 bottom-0 top-[84px] flex flex-col overflow-hidden">
+            <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 pb-4 md:p-5">
               {children}
             </main>
           </div>
@@ -90,7 +90,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
           <aside
             className={`
               fixed z-40
-              top-[76px] bottom-4 left-4
+              top-[104px] bottom-5 left-4
               w-[240px] lg:w-[260px]
               flex flex-col
               rounded-3xl
@@ -164,8 +164,8 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
           </aside>
 
           {/* ============ CONTENT AREA (pushed by sidebar) ============ */}
-          <div className="ml-0 lg:ml-[276px] md:ml-[256px] min-h-[calc(100vh-60px)] flex flex-col">
-            <main className="flex-1 p-4 md:p-6 pb-4">
+          <div className="fixed inset-x-0 bottom-0 top-[84px] flex flex-col overflow-hidden md:ml-[256px] lg:ml-[276px]">
+            <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 pb-5 md:p-5">
               {children}
             </main>
           </div>

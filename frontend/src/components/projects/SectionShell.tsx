@@ -76,11 +76,11 @@ function SectionShell({
   );
 
   if (fullBleed) {
-    return <div className="flex flex-col flex-1">{content}</div>;
+    return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{content}</div>;
   }
 
   return (
-    <div className="glass-panel rounded-2xl md:rounded-3xl border border-white/[0.08] shadow-xl p-5 md:p-7 flex flex-col flex-1">
+    <div className="glass-panel custom-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain rounded-2xl border border-white/[0.08] p-5 shadow-xl md:rounded-3xl md:p-7">
       {content}
     </div>
   );
