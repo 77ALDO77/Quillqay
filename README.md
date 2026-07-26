@@ -18,7 +18,11 @@ La meta es que un proyecto pueda contener:
 
 ## Estado actual
 
-El frontend ya contiene la experiencia principal y usa datos demo/locales para varias secciones. El backend existe como base en Rust para manejar paginas, bloques, API HTTP, WebSocket y persistencia en PostgreSQL, pero el frontend todavia no esta completamente conectado a la API real.
+Autenticacion, proyectos y documentos ya cuentan con API persistente. Los
+metadatos y versiones viven en PostgreSQL; el contenido Editor.js se almacena
+como JSON privado e inmutable en MinIO. El listado y editor de documentos ya
+consumen esta API con autosave y control optimista de versiones. Notas, kanban
+y diagramas conservan datos demo/locales mientras se implementan sus fases.
 
 ## Stack
 
@@ -47,6 +51,7 @@ Backend:
 Infraestructura:
 
 - Dockerfile para backend
+- Docker Compose para PostgreSQL, MinIO y backend
 - Kubernetes manifests en `k8s/`
 - Configuracion PWA en el frontend
 
@@ -117,27 +122,68 @@ http://localhost:3000
 
 ### Backend
 
-El backend requiere una variable `DATABASE_URL` apuntando a PostgreSQL.
+La forma recomendada de levantar la infraestructura local es Docker Compose:
+
+```bash
+cp .env.example .env
+docker compose up --build -d
+```
+
+Esto inicia:
+
+- PostgreSQL en `localhost:5433`.
+- MinIO en `localhost:9000` y su consola en `localhost:9001`.
+- El backend en `localhost:3000`.
+- Migraciones y bootstrap idempotente del administrador antes del backend.
+
+Las credenciales incluidas son solo para desarrollo. Cambia `POSTGRES_PASSWORD`,
+`MINIO_ROOT_PASSWORD` y `ADMIN_PASSWORD` en `.env` para cualquier entorno compartido.
+
+Para ejecutar el backend fuera de Docker, copia `backend/.env.example` a
+`backend/.env`, mantén PostgreSQL y MinIO activos y ejecuta:
 
 ```bash
 cd backend
+cargo run -- migrate
+cargo run -- bootstrap-admin
 cargo run
 ```
 
-Ejemplo de variable:
+La API disponible actualmente incluye:
+
+- `GET /health` para liveness sin dependencias.
+- `GET /ready` para readiness de PostgreSQL y MinIO.
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/me`
+- `GET/POST /api/v1/projects`
+- `GET/PATCH/DELETE /api/v1/projects/:project_id`
+- `POST /api/v1/projects/:project_id/restore`
+- `GET/POST /api/v1/projects/:project_id/documents`
+- `GET/PATCH/DELETE /api/v1/projects/:project_id/documents/:document_id`
+- `PUT /api/v1/projects/:project_id/documents/:document_id/content`
+- `POST /api/v1/projects/:project_id/documents/:document_id/restore`
+- `GET /api/v1/projects/:project_id/documents/:document_id/revisions`
+- `GET /api/v1/projects/:project_id/documents/:document_id/revisions/:revision_id`
+- `POST /api/v1/projects/:project_id/documents/:document_id/revisions/:revision_id/restore`
+
+Las rutas de proyectos requieren la cookie creada por login. Las solicitudes
+que modifican datos también deben enviar un encabezado `Origin` que coincida
+con `ALLOWED_ORIGIN`.
+
+Para comprobar manualmente escritura, lectura y borrado en MinIO:
 
 ```bash
-DATABASE_URL=postgres://user:password@localhost:5432/quillqay
+docker compose run --rm backend ./qillqay-backend storage-smoke-test
 ```
 
-El backend expone:
+Los objetos que quedan huerfanos tras un conflicto o fallo de PostgreSQL se
+registran en `storage_cleanup_jobs`. El backend procesa la cola cada minuto;
+tambien puede ejecutarse una pasada manual:
 
-- `GET /health`
-- `GET /api/v1/pages`
-- `POST /api/v1/pages`
-- `GET /api/v1/pages/:id`
-- `PUT /api/v1/pages/:id`
-- `GET /ws`
+```bash
+docker compose run --rm backend ./qillqay-backend cleanup-storage
+```
 
 ## Comandos utiles
 
@@ -157,6 +203,7 @@ Backend:
 cd backend
 cargo run
 cargo build --release
+cargo test
 ```
 
 ## Variables de entorno
@@ -170,8 +217,11 @@ NEXT_PUBLIC_API_URL=/api/v1
 Backend:
 
 ```bash
-DATABASE_URL=postgres://user:password@localhost:5432/quillqay
+cp backend/.env.example backend/.env
 ```
+
+La referencia completa de variables y valores locales está en
+`backend/.env.example`.
 
 ## Diseno
 
@@ -187,5 +237,3 @@ Quillqay busca convertirse en una herramienta abierta para pensar, escribir y di
 - Mas herramientas de diagramacion.
 - Editor de documentos mas completo.
 - Integracion de IA para resumir, mejorar redaccion y asistir en documentacion tecnica.
-
-

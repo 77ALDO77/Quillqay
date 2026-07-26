@@ -15,7 +15,7 @@ const nextConfig = {
         return [
             {
                 source: '/api/:path*',
-                destination: 'http://127.0.0.1:8080/api/:path*', // Proxy to Backend Local Port-forward
+                destination: `${process.env.BACKEND_INTERNAL_URL || 'http://127.0.0.1:3000'}/api/:path*`,
             },
         ];
     },

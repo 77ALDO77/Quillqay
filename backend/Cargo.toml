@@ -5,7 +5,8 @@ edition = "2021"
 
 [dependencies]
 # Servidor Web
-axum = { version = "0.7", features = ["ws"] } 
+axum = { version = "0.7", features = ["ws"] }
+axum-extra = { version = "0.9", features = ["cookie"] }
 tokio = { version = "1.0", features = ["full"] }
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 
@@ -23,3 +24,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 futures = "0.3.31"
 thiserror = "1.0"
 async-trait = "0.1"
+argon2 = "0.5"
+base64 = "0.22"
+sha2 = "0.10"
+time = "0.3"
+aws-sdk-s3 = "1.139"

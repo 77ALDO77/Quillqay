@@ -1,0 +1,121 @@
+name: quillqay
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-quillqay_db}
+      POSTGRES_USER: ${POSTGRES_USER:-quillqay}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quillqay_dev_password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-quillqay}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-quillqay_dev_password}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-quillqay}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-quillqay_dev_password}
+      S3_CONTENT_BUCKET: ${S3_CONTENT_BUCKET:-quillqay-content}
+      S3_ASSETS_BUCKET: ${S3_ASSETS_BUCKET:-quillqay-assets}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
+        mc mb --ignore-existing "local/$${S3_CONTENT_BUCKET}"
+        mc mb --ignore-existing "local/$${S3_ASSETS_BUCKET}"
+        mc anonymous set none "local/$${S3_CONTENT_BUCKET}"
+        mc anonymous set none "local/$${S3_ASSETS_BUCKET}"
+    restart: "no"
+
+  migrate:
+    build:
+      context: ./backend
+    command: ["./qillqay-backend", "migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment: &backend-environment
+      DATABASE_URL: postgres://${POSTGRES_USER:-quillqay}:${POSTGRES_PASSWORD:-quillqay_dev_password}@postgres:5432/${POSTGRES_DB:-quillqay_db}
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-5}
+      BIND_ADDR: 0.0.0.0:3000
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-http://localhost:3001}
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-quillqay}
+      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-quillqay_dev_password}
+      S3_CONTENT_BUCKET: ${S3_CONTENT_BUCKET:-quillqay-content}
+      S3_ASSETS_BUCKET: ${S3_ASSETS_BUCKET:-quillqay-assets}
+      S3_FORCE_PATH_STYLE: "true"
+      S3_REQUEST_TIMEOUT_SECONDS: ${S3_REQUEST_TIMEOUT_SECONDS:-5}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-quillqay_session}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-168}
+      DOCUMENT_MAX_BYTES: ${DOCUMENT_MAX_BYTES:-1048576}
+      DOCUMENT_MAX_BLOCKS: ${DOCUMENT_MAX_BLOCKS:-2000}
+      RUST_LOG: ${RUST_LOG:-qillqay_backend=debug,tower_http=debug}
+    restart: "no"
+
+  bootstrap-admin:
+    build:
+      context: ./backend
+    command: ["./qillqay-backend", "bootstrap-admin"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *backend-environment
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@quillqay.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-this-development-password}
+      ADMIN_DISPLAY_NAME: ${ADMIN_DISPLAY_NAME:-Quillqay Admin}
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+    depends_on:
+      bootstrap-admin:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *backend-environment
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/ready"]
+      interval: 10s
+      timeout: 6s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  minio-data:

@@ -1,108 +1,66 @@
+use crate::AppState;
 use axum::{
-    extract::{ws::{Message, WebSocket, WebSocketUpgrade}, State, Path},
+    extract::{
+        ws::{Message, WebSocket, WebSocketUpgrade},
+        State,
+    },
+    http::StatusCode,
     response::IntoResponse,
     Json,
-    http::StatusCode,
 };
-use std::sync::Arc;
-use tokio::sync::broadcast;
 use futures::{sink::SinkExt, stream::StreamExt};
-use uuid::Uuid;
-use serde::Deserialize;
-use serde_json::json;
-
-use crate::AppState;
-use crate::infrastructure::persistence::postgres::PostgresRepository;
-use crate::domain::entities::{Block, Page};
-use crate::domain::repositories::PageRepository;
+use serde::Serialize;
+use std::sync::Arc;
 
 pub async fn health_check() -> &'static str {
     "OK"
 }
 
-// --- Pages CRUD ---
-
-#[derive(Deserialize)]
-pub struct CreatePageRequest {
-    title: String,
+#[derive(Serialize)]
+pub struct ReadinessResponse {
+    status: &'static str,
+    checks: ReadinessResponseChecks,
 }
 
-pub async fn create_page_handler(
-    State(state): State<Arc<AppState>>,
-    Json(payload): Json<CreatePageRequest>,
-) -> Result<Json<Page>, StatusCode> {
-    let repo = PostgresRepository::new(state.pool.clone());
-    
-    match repo.create_page(payload.title).await {
-        Ok(page) => Ok(Json(page)),
-        Err(e) => {
-            tracing::error!("Failed to create page: {:?}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
+#[derive(Serialize)]
+struct ReadinessResponseChecks {
+    postgres: &'static str,
+    storage: &'static str,
 }
 
-pub async fn get_all_pages_handler(
+pub async fn readiness_check(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<Vec<Page>>, StatusCode> {
-    let repo = PostgresRepository::new(state.pool.clone());
-    
-    match repo.get_all_pages().await {
-        Ok(pages) => Ok(Json(pages)),
-        Err(e) => {
-            tracing::error!("Failed to fetch pages: {:?}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
-}
-
-pub async fn get_page_handler(
-    Path(id): Path<Uuid>,
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<serde_json::Value>, StatusCode> {
-    let repo = PostgresRepository::new(state.pool.clone());
-    
-    let page = repo.get_page(id).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    
-    if let Some(page) = page {
-        let blocks = repo.get_blocks_for_page(id).await.unwrap_or(vec![]);
-        
-        // Return combined structure expected by frontend (Page interface)
-        // Frontend expects: { id, title, blocks: [] }
-        Ok(Json(json!({
-            "id": page.id,
-            "title": page.title,
-            "parent_id": page.parent_id,
-            "blocks": blocks
-        })))
+) -> (StatusCode, Json<ReadinessResponse>) {
+    let checks = state.readiness_service.check().await;
+    let status = if checks.is_ready() {
+        StatusCode::OK
     } else {
-        Err(StatusCode::NOT_FOUND)
+        StatusCode::SERVICE_UNAVAILABLE
+    };
+
+    (
+        status,
+        Json(ReadinessResponse {
+            status: if checks.is_ready() {
+                "ready"
+            } else {
+                "not_ready"
+            },
+            checks: ReadinessResponseChecks {
+                postgres: check_label(checks.postgres),
+                storage: check_label(checks.storage),
+            },
+        }),
+    )
+}
+
+fn check_label(healthy: bool) -> &'static str {
+    if healthy {
+        "ok"
+    } else {
+        "error"
     }
 }
-
-#[derive(Deserialize)]
-pub struct UpdatePageRequest {
-    title: String,
-    blocks: Vec<Block>,
-}
-
-pub async fn update_page_handler(
-    Path(id): Path<Uuid>,
-    State(state): State<Arc<AppState>>,
-    Json(payload): Json<UpdatePageRequest>,
-) -> Result<StatusCode, StatusCode> {
-    let repo = PostgresRepository::new(state.pool.clone());
-    
-    match repo.save_page_content(id, payload.title, payload.blocks).await {
-        Ok(_) => Ok(StatusCode::OK),
-        Err(e) => {
-            tracing::error!("Failed to update page: {:?}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
-}
-
-// --- WebSocket ---
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
@@ -116,21 +74,21 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     let mut rx = state.tx.subscribe();
 
     let mut send_task = tokio::spawn(async move {
-        while let Ok(msg) = rx.recv().await {
-            if sender.send(Message::Text(msg)).await.is_err() {
+        while let Ok(message) = rx.recv().await {
+            if sender.send(Message::Text(message)).await.is_err() {
                 break;
             }
         }
     });
 
-    let mut recv_task = tokio::spawn(async move {
-        while let Some(Ok(msg)) = receiver.next().await {
-            tracing::debug!("Received message: {:?}", msg);
+    let mut receive_task = tokio::spawn(async move {
+        while let Some(Ok(message)) = receiver.next().await {
+            tracing::debug!(?message, "received websocket message");
         }
     });
 
     tokio::select! {
-        _ = (&mut send_task) => recv_task.abort(),
-        _ = (&mut recv_task) => send_task.abort(),
+        _ = (&mut send_task) => receive_task.abort(),
+        _ = (&mut receive_task) => send_task.abort(),
     };
 }
