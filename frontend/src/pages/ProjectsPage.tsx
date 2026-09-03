@@ -1,7 +1,5 @@
-'use client';
-
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import ViewTransitionLink from '@/components/ViewTransitionLink';
 import {
   Terminal, Bell, Search, LogOut,
@@ -116,7 +114,7 @@ export default function ProjectsPage() {
 
       {/* Navbar */}
       <header className="sticky top-0 z-50 flex justify-between items-center px-4 md:px-6 py-3 bg-surface/60 backdrop-blur-lg rounded-xl mt-4 mx-4 border border-white/10 shadow-[0_0_15px_rgba(157,92,255,0.1)]">
-        <Link href="/projects" className="flex items-center gap-2.5">
+        <Link to="/projects" className="flex items-center gap-2.5">
           <div className="w-7 h-7 md:w-8 md:h-8 bg-primary-container rounded-lg flex items-center justify-center glow-accent">
             <Terminal className="w-3.5 h-3.5 md:w-4 md:h-4 text-on-primary-container" />
           </div>
@@ -139,7 +137,7 @@ export default function ProjectsPage() {
           <button className="p-2 rounded-full hover:bg-white/5 transition-all" aria-label="Notifications">
             <Bell className="w-4 md:w-5 h-4 md:h-5 text-on-surface-variant" />
           </button>
-          <Link href="/login" className="p-2 rounded-full hover:bg-white/5 transition-all" aria-label="Sign out">
+          <Link to="/login" className="p-2 rounded-full hover:bg-white/5 transition-all" aria-label="Sign out">
             <LogOut className="w-4 md:w-5 h-4 md:h-5 text-on-surface-variant" />
           </Link>
           <div className="h-7 w-7 md:h-8 md:w-8 rounded-full border border-primary/40 p-0.5">
@@ -230,7 +228,7 @@ export default function ProjectsPage() {
                     </span>
                   </div>
                   <ViewTransitionLink
-                    href={`/projects/${project.id}/notes`}
+                    to={`/projects/${project.id}/notes`}
                     className={`flex items-center gap-1 text-xs font-bold text-${project.color} hover:underline`}
                   >
                     Open

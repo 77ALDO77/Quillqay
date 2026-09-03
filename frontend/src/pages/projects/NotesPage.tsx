@@ -1,7 +1,5 @@
-'use client';
-
 import NotesSection from '@/components/projects/NotesSection';
 
-export default function ProjectNotesPage() {
+export default function NotesPage() {
   return <NotesSection />;
 }

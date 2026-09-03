@@ -1,12 +1,9 @@
-'use client';
-
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useNavigate, Link } from 'react-router-dom';
 import { Terminal, ArrowLeft, Mail, KeyRound, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -18,7 +15,7 @@ export default function LoginPage() {
     setLoading('email');
     await new Promise((r) => setTimeout(r, 800));
     setLoading(null);
-    router.push('/projects');
+    navigate('/projects');
   };
 
   const handleSocialLogin = async (provider: 'google' | 'github') => {
@@ -26,7 +23,7 @@ export default function LoginPage() {
     setLoading(provider);
     await new Promise((r) => setTimeout(r, 800));
     setLoading(null);
-    router.push('/projects');
+    navigate('/projects');
   };
 
   return (
@@ -38,7 +35,7 @@ export default function LoginPage() {
 
       {/* Back link */}
       <Link
-        href="/"
+        to="/"
         className="relative z-10 flex items-center gap-2 text-on-surface-variant/60 hover:text-primary transition-colors text-sm mb-8 self-start ml-4 md:self-center md:ml-0"
       >
         <ArrowLeft className="w-4 h-4" />

@@ -1,15 +1,17 @@
-'use client';
-
-import dynamic from 'next/dynamic';
+import React, { Suspense, lazy } from 'react';
 import { Loader2 } from 'lucide-react';
 import '@excalidraw/excalidraw/index.css';
 
-const Excalidraw = dynamic(
-  () => import('@excalidraw/excalidraw').then((mod) => {
-    function Wrapped() {
-      return (
-        <>
-          <style>{`
+const LazyExcalidraw = lazy(() =>
+  import('@excalidraw/excalidraw').then((mod) => ({
+    default: mod.Excalidraw,
+  }))
+);
+
+export default function WhiteboardEditor() {
+  return (
+    <div className="w-full h-full">
+      <style>{`
 .excalidraw.theme--dark {
   --default-bg-color: #131315;
   --island-bg-color: #1c1b1d;
@@ -43,32 +45,27 @@ const Excalidraw = dynamic(
   --color-icon-white: #e5e1e4;
   --overlay-bg-color: rgba(0,0,0,0.6);
 }
-          `}</style>
-          <mod.Excalidraw
-            theme="dark"
-            viewModeEnabled={false}
-            zenModeEnabled={false}
-            UIOptions={{
-              canvasActions: {
-                export: false,
-                loadScene: false,
-                saveToActiveFile: false,
-              },
-            }}
-          />
-        </>
-      );
-    }
-    Wrapped.displayName = 'ExcalidrawWrapper';
-    return Wrapped;
-  }),
-  { ssr: false }
-);
-
-export default function WhiteboardEditor() {
-  return (
-    <div className="w-full h-full">
-      <Excalidraw />
+      `}</style>
+      <Suspense
+        fallback={
+          <div className="flex h-full w-full items-center justify-center bg-surface-container-low">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        }
+      >
+        <LazyExcalidraw
+          theme="dark"
+          viewModeEnabled={false}
+          zenModeEnabled={false}
+          UIOptions={{
+            canvasActions: {
+              export: false,
+              loadScene: false,
+              saveToActiveFile: false,
+            },
+          }}
+        />
+      </Suspense>
     </div>
   );
 }

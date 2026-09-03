@@ -1,7 +1,5 @@
-'use client';
-
 import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams } from 'react-router-dom';
 import { type TableDef } from '@/types/db-schema';
 import { SchemaProvider } from '@/context/schema-context';
 import { DiagramLayoutProvider } from '@/context/diagram-layout-context';
@@ -24,7 +22,7 @@ const defaultTables: TableDef[] = [
   ] },
 ];
 
-export default function DbDiagramEditorPage() {
+export default function DbDiagramPage() {
   const params = useParams();
   const diagramId = (params.diagramId as string) || 'default';
   const [tables, setTables] = useState<TableDef[]>(defaultTables);

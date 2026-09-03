@@ -1,9 +1,7 @@
-'use client';
-
 import FlowchartEditor from '@/components/projects/FlowchartEditor';
 import FlowchartSidebar from '@/components/projects/FlowchartSidebar';
 
-export default function FlowchartEditorPage() {
+export default function FlowchartDiagramPage() {
   return (
     <>
       <aside

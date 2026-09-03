@@ -1,12 +1,10 @@
-'use client';
-
-import { useState, ReactNode, useEffect } from 'react';
-import Link from 'next/link';
-import { useParams, usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { Link, useParams, useLocation, Outlet } from 'react-router-dom';
 import {
   Terminal, Bell, LogOut, ArrowLeft,
   StickyNote, FileText, GitBranch, Columns3, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
+
 const sidebarLinks = [
   { href: 'notes', label: 'Notes', icon: StickyNote },
   { href: 'documents', label: 'Documents', icon: FileText },
@@ -18,10 +16,10 @@ const NAVBAR_BG = { background: 'linear-gradient(135deg, rgba(28,27,29,0.9) 0%, 
 const SIDEBAR_BG = { background: 'linear-gradient(135deg, rgba(28,27,29,0.95) 0%, rgba(20,20,22,0.98) 100%)' } as const;
 const SIDEBAR_INSET = { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' } as const;
 
-export default function ProjectLayout({ children }: { children: ReactNode }) {
-  const params = useParams();
-  const pathname = usePathname();
-  const id = params.id as string;
+export default function ProjectLayout() {
+  const { id = '' } = useParams<{ id: string }>();
+  const location = useLocation();
+  const pathname = location.pathname;
   const [mounted, setMounted] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const isDbDiagram = pathname.includes('/diagrams/db/');
@@ -46,7 +44,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
         <div className="absolute -inset-4 bg-primary/[0.04] rounded-[20px] blur-2xl pointer-events-none -z-10" />
         <div className="flex items-center gap-3">
           <Link
-            href={isDiagramEditor ? `/projects/${id}/diagrams` : '/projects'}
+            to={isDiagramEditor ? `/projects/${id}/diagrams` : '/projects'}
             className="p-2 rounded-xl hover:bg-white/[0.06] transition-all text-on-surface-variant/60 hover:text-on-surface-variant"
             aria-label={isDiagramEditor ? 'Back to diagrams' : 'Back to projects'}
           >
@@ -81,7 +79,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
           {/* ============ CONTENT AREA (full width, page renders sidebar) ============ */}
           <div className="fixed inset-x-0 bottom-0 top-[84px] flex flex-col overflow-hidden">
             <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 pb-4 md:p-5">
-              {children}
+              <Outlet />
             </main>
           </div>
         </>
@@ -133,7 +131,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
                   return (
                     <Link
                       key={link.href}
-                      href={`/projects/${id}/${link.href}`}
+                      to={`/projects/${id}/${link.href}`}
                       className={`
                         flex items-center rounded-xl text-sm font-medium
                         transition-all duration-500 ease-out
@@ -159,8 +157,8 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
             </div>
 
             <div className="mt-auto p-5 border-t border-white/[0.06]">
-                <Link
-                href="/login"
+              <Link
+                to="/login"
                 className={`
                   flex items-center rounded-xl
                   text-on-surface-variant/40 hover:bg-white/[0.04] hover:text-on-surface-variant/70
@@ -180,7 +178,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
           {/* ============ CONTENT AREA (pushed by sidebar) ============ */}
           <div className={`fixed inset-x-0 bottom-0 top-[84px] flex flex-col overflow-hidden transition-all duration-500 ease-out ${sidebarCollapsed ? 'md:ml-[92px]' : 'md:ml-[256px] lg:ml-[276px]'}`}>
             <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 pb-5 md:p-5">
-              {children}
+              <Outlet />
             </main>
           </div>
         </>
