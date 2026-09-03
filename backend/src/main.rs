@@ -24,7 +24,7 @@ mod infrastructure;
 
 use application::{
     auth::AuthService, documents::DocumentService, notes::NoteService, projects::ProjectService,
-    readiness::ReadinessService, storage_cleanup::StorageCleanupService,
+    readiness::ReadinessService, storage_cleanup::StorageCleanupService, tasks::TaskService,
 };
 use config::Config;
 use domain::storage::{ContentMetadata, ObjectStorage};
@@ -45,6 +45,7 @@ use infrastructure::{
             create_project, delete_project, get_project, list_projects, restore_project,
             update_project,
         },
+        tasks::{create_task, delete_task, list_tasks, update_task},
     },
 };
 
@@ -60,6 +61,7 @@ pub struct AppState {
     pub project_service: ProjectService,
     pub document_service: DocumentService,
     pub note_service: NoteService,
+    pub task_service: TaskService,
     pub readiness_service: ReadinessService,
     pub storage: Arc<dyn ObjectStorage>,
     pub cookie: SessionCookieConfig,
@@ -123,6 +125,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let project_service = ProjectService::new(repository.clone());
     let note_service = NoteService::new(repository.clone());
+    let task_service = TaskService::new(repository.clone());
     let document_service = DocumentService::new(
         repository.clone(),
         storage.clone(),
@@ -138,6 +141,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         project_service,
         document_service,
         note_service,
+        task_service,
         readiness_service,
         storage,
         cookie: SessionCookieConfig {
@@ -181,6 +185,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route(
             "/projects/:project_id/notes/:note_id",
             patch(update_note).delete(delete_note),
+        )
+        .route(
+            "/projects/:project_id/tasks",
+            get(list_tasks).post(create_task),
+        )
+        .route(
+            "/projects/:project_id/tasks/:task_id",
+            patch(update_task).delete(delete_task),
         )
         .route(
             "/projects/:project_id/documents",

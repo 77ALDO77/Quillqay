@@ -5,3 +5,4 @@ pub mod handlers;
 pub mod middleware;
 pub mod notes;
 pub mod projects;
+pub mod tasks;

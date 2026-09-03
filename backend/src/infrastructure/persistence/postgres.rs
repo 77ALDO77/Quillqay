@@ -1,10 +1,13 @@
 use crate::domain::{
     entities::{
-        Document, DocumentVersion, NewDocument, NewNote, NewProject, Note, NoteChanges,
-        PendingDocumentVersion, Project, ProjectChanges, StorageCleanupJob, User, UserWithPassword,
+        Document, DocumentVersion, NewDocument, NewNote, NewProject, NewTask, Note, NoteChanges,
+        PendingDocumentVersion, Project, ProjectChanges, StorageCleanupJob, Task, TaskChanges,
+        User, UserWithPassword,
     },
     errors::DomainError,
-    repositories::{DocumentRepository, NoteRepository, ProjectRepository, UserRepository},
+    repositories::{
+        DocumentRepository, NoteRepository, ProjectRepository, TaskRepository, UserRepository,
+    },
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
@@ -138,6 +141,35 @@ impl From<NoteRow> for Note {
     }
 }
 
+#[derive(FromRow)]
+struct TaskRow {
+    id: Uuid,
+    project_id: Uuid,
+    title: String,
+    description: String,
+    status: String,
+    priority: String,
+    order_index: i32,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
+impl From<TaskRow> for Task {
+    fn from(row: TaskRow) -> Self {
+        Self {
+            id: row.id,
+            project_id: row.project_id,
+            title: row.title,
+            description: row.description,
+            status: row.status,
+            priority: row.priority,
+            order_index: row.order_index,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        }
+    }
+}
+
 impl From<StorageCleanupJobRow> for StorageCleanupJob {
     fn from(row: StorageCleanupJobRow) -> Self {
         Self {
@@ -233,6 +265,12 @@ const NOTE_SELECT: &str = r#"
     SELECT n.id, n.project_id, n.text, n.color, n.pinned, n.created_at, n.updated_at
     FROM notes n
     INNER JOIN projects p ON p.id = n.project_id
+"#;
+
+const TASK_SELECT: &str = r#"
+    SELECT t.id, t.project_id, t.title, t.description, t.status, t.priority, t.order_index, t.created_at, t.updated_at
+    FROM tasks t
+    INNER JOIN projects p ON p.id = t.project_id
 "#;
 
 #[async_trait]
@@ -1005,4 +1043,145 @@ impl NoteRepository for PostgresRepository {
         Ok(result.rows_affected() > 0)
     }
 }
+
+#[async_trait]
+impl TaskRepository for PostgresRepository {
+    async fn list_tasks(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+    ) -> Result<Vec<Task>, DomainError> {
+        let query = format!(
+            "{TASK_SELECT}
+             WHERE p.owner_id = $1
+               AND p.id = $2
+               AND p.deleted_at IS NULL
+             ORDER BY t.order_index ASC, t.updated_at DESC"
+        );
+        let rows = sqlx::query_as::<_, TaskRow>(&query)
+            .bind(owner_id)
+            .bind(project_id)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(rows.into_iter().map(Task::from).collect())
+    }
+
+    async fn create_task(
+        &self,
+        owner_id: Uuid,
+        task: NewTask,
+    ) -> Result<Option<Task>, DomainError> {
+        let result = sqlx::query(
+            r#"
+            INSERT INTO tasks (id, project_id, title, description, status, priority, order_index)
+            SELECT $1, p.id, $3, $4, $5, $6, $7
+            FROM projects p
+            WHERE p.id = $2 AND p.owner_id = $8 AND p.deleted_at IS NULL
+            "#,
+        )
+        .bind(task.id)
+        .bind(task.project_id)
+        .bind(task.title)
+        .bind(task.description)
+        .bind(task.status)
+        .bind(task.priority)
+        .bind(task.order_index)
+        .bind(owner_id)
+        .execute(&self.pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Ok(None);
+        }
+
+        self.get_task(owner_id, task.project_id, task.id).await
+    }
+
+    async fn get_task(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        task_id: Uuid,
+    ) -> Result<Option<Task>, DomainError> {
+        let query = format!(
+            "{TASK_SELECT}
+             WHERE p.owner_id = $1
+               AND p.id = $2
+               AND t.id = $3
+               AND p.deleted_at IS NULL"
+        );
+        let row = sqlx::query_as::<_, TaskRow>(&query)
+            .bind(owner_id)
+            .bind(project_id)
+            .bind(task_id)
+            .fetch_optional(&self.pool)
+            .await?;
+        Ok(row.map(Task::from))
+    }
+
+    async fn update_task(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        task_id: Uuid,
+        changes: TaskChanges,
+    ) -> Result<Option<Task>, DomainError> {
+        let current = match self.get_task(owner_id, project_id, task_id).await? {
+            Some(task) => task,
+            None => return Ok(None),
+        };
+
+        let new_title = changes.title.unwrap_or(current.title);
+        let new_desc = changes.description.unwrap_or(current.description);
+        let new_status = changes.status.unwrap_or(current.status);
+        let new_priority = changes.priority.unwrap_or(current.priority);
+        let new_order = changes.order_index.unwrap_or(current.order_index);
+
+        sqlx::query(
+            r#"
+            UPDATE tasks
+            SET title = $1, description = $2, status = $3, priority = $4, order_index = $5, updated_at = NOW()
+            WHERE id = $6 AND project_id = $7
+            "#,
+        )
+        .bind(new_title)
+        .bind(new_desc)
+        .bind(new_status)
+        .bind(new_priority)
+        .bind(new_order)
+        .bind(task_id)
+        .bind(project_id)
+        .execute(&self.pool)
+        .await?;
+
+        self.get_task(owner_id, project_id, task_id).await
+    }
+
+    async fn delete_task(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        task_id: Uuid,
+    ) -> Result<bool, DomainError> {
+        let result = sqlx::query(
+            r#"
+            DELETE FROM tasks t
+            USING projects p
+            WHERE t.project_id = p.id
+              AND p.id = $1
+              AND p.owner_id = $2
+              AND t.id = $3
+              AND p.deleted_at IS NULL
+            "#,
+        )
+        .bind(project_id)
+        .bind(owner_id)
+        .bind(task_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(result.rows_affected() > 0)
+    }
+}
+
 

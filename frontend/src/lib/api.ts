@@ -290,4 +290,71 @@ export function deleteNote(projectId: string, noteId: string): Promise<void> {
   });
 }
 
+// ----------------------------------------------------------------------------
+// Tasks / Kanban
+// ----------------------------------------------------------------------------
+
+export type TaskStatus = 'todo' | 'in-progress' | 'done';
+export type TaskPriority = 'low' | 'medium' | 'high';
+
+export interface Task {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  orderIndex: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTaskInput {
+  title: string;
+  description?: string;
+  priority?: TaskPriority;
+  status?: TaskStatus;
+  orderIndex?: number;
+}
+
+export interface UpdateTaskInput {
+  title?: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  orderIndex?: number;
+}
+
+export function listTasks(projectId: string): Promise<Task[]> {
+  return apiRequest(`/projects/${projectId}/tasks`);
+}
+
+export function createTask(
+  projectId: string,
+  input: CreateTaskInput,
+): Promise<Task> {
+  return apiRequest(`/projects/${projectId}/tasks`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateTask(
+  projectId: string,
+  taskId: string,
+  input: UpdateTaskInput,
+): Promise<Task> {
+  return apiRequest(`/projects/${projectId}/tasks/${taskId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteTask(projectId: string, taskId: string): Promise<void> {
+  return apiRequest(`/projects/${projectId}/tasks/${taskId}`, {
+    method: 'DELETE',
+  });
+}
+
+
 

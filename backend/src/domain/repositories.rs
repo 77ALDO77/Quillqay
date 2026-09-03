@@ -1,7 +1,8 @@
 use crate::domain::{
     entities::{
-        Document, DocumentVersion, NewDocument, NewNote, NewProject, Note, NoteChanges,
-        PendingDocumentVersion, Project, ProjectChanges, StorageCleanupJob, User, UserWithPassword,
+        Document, DocumentVersion, NewDocument, NewNote, NewProject, NewTask, Note, NoteChanges,
+        PendingDocumentVersion, Project, ProjectChanges, StorageCleanupJob, Task, TaskChanges,
+        User, UserWithPassword,
     },
     errors::DomainError,
 };
@@ -166,4 +167,38 @@ pub trait NoteRepository: Send + Sync {
         note_id: Uuid,
     ) -> Result<bool, DomainError>;
 }
+
+#[async_trait]
+pub trait TaskRepository: Send + Sync {
+    async fn list_tasks(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+    ) -> Result<Vec<Task>, DomainError>;
+    async fn create_task(
+        &self,
+        owner_id: Uuid,
+        task: NewTask,
+    ) -> Result<Option<Task>, DomainError>;
+    async fn get_task(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        task_id: Uuid,
+    ) -> Result<Option<Task>, DomainError>;
+    async fn update_task(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        task_id: Uuid,
+        changes: TaskChanges,
+    ) -> Result<Option<Task>, DomainError>;
+    async fn delete_task(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        task_id: Uuid,
+    ) -> Result<bool, DomainError>;
+}
+
 

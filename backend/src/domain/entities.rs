@@ -151,3 +151,38 @@ pub struct NoteChanges {
     pub color: Option<String>,
     pub pinned: Option<bool>,
 }
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Task {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub title: String,
+    pub description: String,
+    pub status: String,
+    pub priority: String,
+    pub order_index: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug)]
+pub struct NewTask {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub title: String,
+    pub description: String,
+    pub status: String,
+    pub priority: String,
+    pub order_index: i32,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct TaskChanges {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub status: Option<String>,
+    pub priority: Option<String>,
+    pub order_index: Option<i32>,
+}
+
