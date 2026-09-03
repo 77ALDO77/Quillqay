@@ -1,10 +1,10 @@
 use crate::domain::{
     entities::{
-        Document, DocumentVersion, NewDocument, NewProject, PendingDocumentVersion, Project,
-        ProjectChanges, StorageCleanupJob, User, UserWithPassword,
+        Document, DocumentVersion, NewDocument, NewNote, NewProject, Note, NoteChanges,
+        PendingDocumentVersion, Project, ProjectChanges, StorageCleanupJob, User, UserWithPassword,
     },
     errors::DomainError,
-    repositories::{DocumentRepository, ProjectRepository, UserRepository},
+    repositories::{DocumentRepository, NoteRepository, ProjectRepository, UserRepository},
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
@@ -113,6 +113,31 @@ struct StorageCleanupJobRow {
     attempts: i32,
 }
 
+#[derive(FromRow)]
+struct NoteRow {
+    id: Uuid,
+    project_id: Uuid,
+    text: String,
+    color: String,
+    pinned: bool,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
+impl From<NoteRow> for Note {
+    fn from(row: NoteRow) -> Self {
+        Self {
+            id: row.id,
+            project_id: row.project_id,
+            text: row.text,
+            color: row.color,
+            pinned: row.pinned,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        }
+    }
+}
+
 impl From<StorageCleanupJobRow> for StorageCleanupJob {
     fn from(row: StorageCleanupJobRow) -> Self {
         Self {
@@ -202,6 +227,12 @@ const DOCUMENT_VERSION_SELECT: &str = r#"
     FROM document_versions v
     INNER JOIN documents d ON d.id = v.document_id
     INNER JOIN projects p ON p.id = d.project_id
+"#;
+
+const NOTE_SELECT: &str = r#"
+    SELECT n.id, n.project_id, n.text, n.color, n.pinned, n.created_at, n.updated_at
+    FROM notes n
+    INNER JOIN projects p ON p.id = n.project_id
 "#;
 
 #[async_trait]
@@ -840,3 +871,138 @@ impl DocumentRepository for PostgresRepository {
         Ok(())
     }
 }
+
+#[async_trait]
+impl NoteRepository for PostgresRepository {
+    async fn list_notes(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+    ) -> Result<Vec<Note>, DomainError> {
+        let query = format!(
+            "{NOTE_SELECT}
+             WHERE p.owner_id = $1
+               AND p.id = $2
+               AND p.deleted_at IS NULL
+             ORDER BY n.pinned DESC, n.updated_at DESC"
+        );
+        let rows = sqlx::query_as::<_, NoteRow>(&query)
+            .bind(owner_id)
+            .bind(project_id)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(rows.into_iter().map(Note::from).collect())
+    }
+
+    async fn create_note(
+        &self,
+        owner_id: Uuid,
+        note: NewNote,
+    ) -> Result<Option<Note>, DomainError> {
+        let result = sqlx::query(
+            r#"
+            INSERT INTO notes (id, project_id, text, color, pinned)
+            SELECT $1, p.id, $3, $4, $5
+            FROM projects p
+            WHERE p.id = $2 AND p.owner_id = $6 AND p.deleted_at IS NULL
+            "#,
+        )
+        .bind(note.id)
+        .bind(note.project_id)
+        .bind(note.text)
+        .bind(note.color)
+        .bind(note.pinned)
+        .bind(owner_id)
+        .execute(&self.pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Ok(None);
+        }
+
+        self.get_note(owner_id, note.project_id, note.id).await
+    }
+
+    async fn get_note(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        note_id: Uuid,
+    ) -> Result<Option<Note>, DomainError> {
+        let query = format!(
+            "{NOTE_SELECT}
+             WHERE p.owner_id = $1
+               AND p.id = $2
+               AND n.id = $3
+               AND p.deleted_at IS NULL"
+        );
+        let row = sqlx::query_as::<_, NoteRow>(&query)
+            .bind(owner_id)
+            .bind(project_id)
+            .bind(note_id)
+            .fetch_optional(&self.pool)
+            .await?;
+        Ok(row.map(Note::from))
+    }
+
+    async fn update_note(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        note_id: Uuid,
+        changes: NoteChanges,
+    ) -> Result<Option<Note>, DomainError> {
+        let current = match self.get_note(owner_id, project_id, note_id).await? {
+            Some(note) => note,
+            None => return Ok(None),
+        };
+
+        let new_text = changes.text.unwrap_or(current.text);
+        let new_color = changes.color.unwrap_or(current.color);
+        let new_pinned = changes.pinned.unwrap_or(current.pinned);
+
+        sqlx::query(
+            r#"
+            UPDATE notes
+            SET text = $1, color = $2, pinned = $3, updated_at = NOW()
+            WHERE id = $4 AND project_id = $5
+            "#,
+        )
+        .bind(new_text)
+        .bind(new_color)
+        .bind(new_pinned)
+        .bind(note_id)
+        .bind(project_id)
+        .execute(&self.pool)
+        .await?;
+
+        self.get_note(owner_id, project_id, note_id).await
+    }
+
+    async fn delete_note(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        note_id: Uuid,
+    ) -> Result<bool, DomainError> {
+        let result = sqlx::query(
+            r#"
+            DELETE FROM notes n
+            USING projects p
+            WHERE n.project_id = p.id
+              AND p.id = $1
+              AND p.owner_id = $2
+              AND n.id = $3
+              AND p.deleted_at IS NULL
+            "#,
+        )
+        .bind(project_id)
+        .bind(owner_id)
+        .bind(note_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(result.rows_affected() > 0)
+    }
+}
+

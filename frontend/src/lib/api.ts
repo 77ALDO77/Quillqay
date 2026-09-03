@@ -139,3 +139,155 @@ export function deleteDocument(
     method: 'DELETE',
   });
 }
+
+// ----------------------------------------------------------------------------
+// User & Auth
+// ----------------------------------------------------------------------------
+
+export interface User {
+  id: string;
+  email: string;
+  displayName: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function login(email: string, password: string): Promise<User> {
+  return apiRequest('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function logout(): Promise<void> {
+  return apiRequest('/auth/logout', {
+    method: 'POST',
+  });
+}
+
+export function getMe(): Promise<User> {
+  return apiRequest('/auth/me');
+}
+
+// ----------------------------------------------------------------------------
+// Projects
+// ----------------------------------------------------------------------------
+
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  color: string;
+  tags: string[];
+  documentCount: number;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProjectInput {
+  title: string;
+  description?: string;
+  color?: string;
+  tags?: string[];
+}
+
+export interface UpdateProjectInput {
+  title?: string;
+  description?: string;
+  color?: string;
+  tags?: string[];
+}
+
+export function listProjects(): Promise<Project[]> {
+  return apiRequest('/projects');
+}
+
+export function createProject(input: CreateProjectInput): Promise<Project> {
+  return apiRequest('/projects', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function getProject(id: string): Promise<Project> {
+  return apiRequest(`/projects/${id}`);
+}
+
+export function updateProject(
+  id: string,
+  input: UpdateProjectInput,
+): Promise<Project> {
+  return apiRequest(`/projects/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteProject(id: string): Promise<void> {
+  return apiRequest(`/projects/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// ----------------------------------------------------------------------------
+// Notes
+// ----------------------------------------------------------------------------
+
+export type NoteColor = 'primary' | 'secondary' | 'tertiary';
+
+export interface Note {
+  id: string;
+  projectId: string;
+  text: string;
+  color: NoteColor;
+  pinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateNoteInput {
+  text: string;
+  color?: NoteColor;
+  pinned?: boolean;
+}
+
+export interface UpdateNoteInput {
+  text?: string;
+  color?: NoteColor;
+  pinned?: boolean;
+}
+
+export function listNotes(projectId: string): Promise<Note[]> {
+  return apiRequest(`/projects/${projectId}/notes`);
+}
+
+export function createNote(
+  projectId: string,
+  input: CreateNoteInput,
+): Promise<Note> {
+  return apiRequest(`/projects/${projectId}/notes`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateNote(
+  projectId: string,
+  noteId: string,
+  input: UpdateNoteInput,
+): Promise<Note> {
+  return apiRequest(`/projects/${projectId}/notes/${noteId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteNote(projectId: string, noteId: string): Promise<void> {
+  return apiRequest(`/projects/${projectId}/notes/${noteId}`, {
+    method: 'DELETE',
+  });
+}
+
+

@@ -1,29 +1,50 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Terminal, ArrowLeft, Mail, KeyRound, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { ApiError } from '@/lib/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login, isAuthenticated, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState<'google' | 'github' | 'email' | null>(null);
 
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/projects';
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate, location]);
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading('email');
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(null);
-    navigate('/projects');
+    try {
+      await login(email, password);
+      const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/projects';
+      navigate(from, { replace: true });
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message || 'Invalid credentials');
+      } else {
+        setError('Could not connect to the backend server');
+      }
+    } finally {
+      setLoading(null);
+    }
   };
 
   const handleSocialLogin = async (provider: 'google' | 'github') => {
     setError('');
     setLoading(provider);
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 600));
     setLoading(null);
-    navigate('/projects');
+    setError(`${provider === 'google' ? 'Google' : 'GitHub'} login will be available soon. Please use email.`);
   };
 
   return (

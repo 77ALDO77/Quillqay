@@ -5,7 +5,7 @@ use argon2::{
 use axum::{
     http::{header, HeaderValue, Method},
     middleware,
-    routing::{get, post, put},
+    routing::{get, patch, post, put},
     Router,
 };
 use sqlx::postgres::PgPoolOptions;
@@ -23,7 +23,7 @@ mod domain;
 mod infrastructure;
 
 use application::{
-    auth::AuthService, documents::DocumentService, projects::ProjectService,
+    auth::AuthService, documents::DocumentService, notes::NoteService, projects::ProjectService,
     readiness::ReadinessService, storage_cleanup::StorageCleanupService,
 };
 use config::Config;
@@ -40,6 +40,7 @@ use infrastructure::{
         },
         handlers::{health_check, readiness_check, ws_handler},
         middleware::validate_origin,
+        notes::{create_note, delete_note, list_notes, update_note},
         projects::{
             create_project, delete_project, get_project, list_projects, restore_project,
             update_project,
@@ -58,6 +59,7 @@ pub struct AppState {
     pub auth_service: AuthService,
     pub project_service: ProjectService,
     pub document_service: DocumentService,
+    pub note_service: NoteService,
     pub readiness_service: ReadinessService,
     pub storage: Arc<dyn ObjectStorage>,
     pub cookie: SessionCookieConfig,
@@ -120,6 +122,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.security.session_ttl_hours,
     );
     let project_service = ProjectService::new(repository.clone());
+    let note_service = NoteService::new(repository.clone());
     let document_service = DocumentService::new(
         repository.clone(),
         storage.clone(),
@@ -134,6 +137,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         auth_service,
         project_service,
         document_service,
+        note_service,
         readiness_service,
         storage,
         cookie: SessionCookieConfig {
@@ -170,6 +174,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .delete(delete_project),
         )
         .route("/projects/:project_id/restore", post(restore_project))
+        .route(
+            "/projects/:project_id/notes",
+            get(list_notes).post(create_note),
+        )
+        .route(
+            "/projects/:project_id/notes/:note_id",
+            patch(update_note).delete(delete_note),
+        )
         .route(
             "/projects/:project_id/documents",
             get(list_documents).post(create_document),

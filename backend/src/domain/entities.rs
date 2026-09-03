@@ -123,3 +123,31 @@ pub struct StorageCleanupJob {
     pub object_key: String,
     pub attempts: i32,
 }
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Note {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub text: String,
+    pub color: String,
+    pub pinned: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug)]
+pub struct NewNote {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub text: String,
+    pub color: String,
+    pub pinned: bool,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct NoteChanges {
+    pub text: Option<String>,
+    pub color: Option<String>,
+    pub pinned: Option<bool>,
+}

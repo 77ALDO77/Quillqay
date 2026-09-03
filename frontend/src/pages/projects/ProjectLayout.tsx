@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link, useParams, useLocation, Outlet } from 'react-router-dom';
+import { Link, useParams, useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import {
   Terminal, Bell, LogOut, ArrowLeft,
   StickyNote, FileText, GitBranch, Columns3, PanelLeftClose, PanelLeftOpen,
@@ -17,6 +18,8 @@ const SIDEBAR_BG = { background: 'linear-gradient(135deg, rgba(28,27,29,0.95) 0%
 const SIDEBAR_INSET = { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' } as const;
 
 export default function ProjectLayout() {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const { id = '' } = useParams<{ id: string }>();
   const location = useLocation();
   const pathname = location.pathname;
@@ -26,6 +29,13 @@ export default function ProjectLayout() {
   const isFlowchart = pathname.includes('/diagrams/flowchart/');
   const isWhiteboard = pathname.includes('/diagrams/whiteboard/');
   const isDiagramEditor = isDbDiagram || isFlowchart || isWhiteboard;
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  const userInitial = (user?.displayName || user?.email || 'U')[0].toUpperCase();
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 50);
@@ -65,11 +75,24 @@ export default function ProjectLayout() {
         </span>
 
         <div className="flex items-center gap-2 md:gap-4">
-          <button className="p-2 rounded-full hover:bg-white/5 transition-all" aria-label="Notifications">
-            <Bell className="w-4 md:w-5 h-4 md:h-5 text-on-surface-variant/50" />
+          <button className="p-2 rounded-full hover:bg-white/5 transition-all text-on-surface-variant/50" aria-label="Notifications">
+            <Bell className="w-4 md:w-5 h-4 md:h-5" />
           </button>
-          <div className="h-7 w-7 md:h-8 md:w-8 rounded-full border border-primary/30 p-0.5">
-            <div className="h-full w-full rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary/70">U</div>
+          <button
+            onClick={handleLogout}
+            className="p-2 rounded-full hover:bg-white/5 transition-all text-on-surface-variant/50 hover:text-error"
+            title="Sign out"
+            aria-label="Sign out"
+          >
+            <LogOut className="w-4 md:w-5 h-4 md:h-5" />
+          </button>
+          <div
+            className="h-7 w-7 md:h-8 md:w-8 rounded-full border border-primary/40 p-0.5"
+            title={user?.email || 'Active user'}
+          >
+            <div className="h-full w-full rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
+              {userInitial}
+            </div>
           </div>
         </div>
       </header>
@@ -157,10 +180,11 @@ export default function ProjectLayout() {
             </div>
 
             <div className="mt-auto p-5 border-t border-white/[0.06]">
-              <Link
-                to="/login"
+              <button
+                type="button"
+                onClick={handleLogout}
                 className={`
-                  flex items-center rounded-xl
+                  flex items-center rounded-xl w-full text-left
                   text-on-surface-variant/40 hover:bg-white/[0.04] hover:text-on-surface-variant/70
                   transition-all duration-500 ease-out text-xs
                   ${sidebarCollapsed ? 'justify-center px-0 py-3' : 'gap-3 px-4 py-2.5'}
@@ -171,7 +195,7 @@ export default function ProjectLayout() {
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span className={sidebarCollapsed ? 'sr-only' : ''}>Sign Out</span>
-              </Link>
+              </button>
             </div>
           </aside>
 
