@@ -1,7 +1,5 @@
-'use client';
-
 import { useState } from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import {
   Terminal, ArrowRight, Blocks, FolderTree, Pen, Zap, Shield, Globe, Menu, X,
 } from 'lucide-react';
@@ -51,7 +49,7 @@ export default function LandingPage() {
       {/* Navbar */}
       <header className="sticky top-0 z-50 px-4 py-3 mt-4 mx-4">
         <nav className="max-w-6xl mx-auto flex justify-between items-center bg-surface/60 backdrop-blur-xl rounded-2xl px-6 py-3 border border-white/10 shadow-[0_0_15px_rgba(157,92,255,0.1)]">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link to="/" className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-primary-container rounded-lg flex items-center justify-center glow-accent">
               <Terminal className="w-4 h-4 text-on-primary-container" />
             </div>
@@ -67,7 +65,7 @@ export default function LandingPage() {
               Docs
             </a>
             <Link
-              href="/login"
+              to="/login"
               className="px-5 py-2 rounded-xl text-sm font-medium bg-primary text-on-primary shadow-lg shadow-primary/20 hover:saturate-150 transition-all"
             >
               Login
@@ -101,7 +99,7 @@ export default function LandingPage() {
               Docs
             </a>
             <Link
-              href="/login"
+              to="/login"
               className="text-sm font-medium bg-primary text-on-primary px-4 py-2 rounded-xl text-center shadow-lg shadow-primary/20"
               onClick={() => setMobileMenu(false)}
             >
@@ -130,7 +128,7 @@ export default function LandingPage() {
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
-            href="/projects"
+            to="/projects"
             className="group flex items-center gap-2 px-8 py-3.5 rounded-xl bg-primary text-on-primary font-bold text-sm shadow-lg shadow-primary/30 hover:saturate-150 hover:scale-105 transition-all duration-300"
           >
             Start Writing
@@ -224,7 +222,7 @@ export default function LandingPage() {
               Your thoughts deserve a beautiful home.
             </p>
             <Link
-              href="/projects"
+              to="/projects"
               className="group inline-flex items-center gap-2 px-10 py-4 rounded-xl bg-primary text-on-primary font-bold text-sm shadow-lg shadow-primary/30 hover:saturate-150 hover:scale-105 transition-all duration-300"
             >
               Enter Quillqay
@@ -244,7 +242,7 @@ export default function LandingPage() {
             <span className="text-sm text-on-surface-variant/60 font-medium">Quillqay</span>
           </div>
           <p className="text-xs text-on-surface-variant/40">
-            Quillqay &mdash; &quot;To Write&quot; in Quechua. Built with Rust + Next.js. Open Source.
+            Quillqay &mdash; &quot;To Write&quot; in Quechua. Built with Rust + React. Open Source.
           </p>
         </div>
       </footer>

@@ -3,15 +3,14 @@
 ## Stack
 
 - **Package manager**: bun (do NOT use npm/yarn)
-- **Frontend**: Next.js 16 + React 19 + Tailwind CSS 4 + Editor.js + TanStack Query + lucide-react (v0.563)
+- **Frontend**: React 19 + Vite 6 + React Router 7 + Tailwind CSS 4 + Editor.js + TanStack Query + lucide-react (v0.563)
 - **Backend**: Rust (Axum 0.7 + SQLx 0.7 + Postgres)
 - **Icons**: lucide-react only — no Google Material Icons, no third-party icon libs
 - **Design**: Liquid Glass system defined in `DESIGN.md`
-- **PWA**: `next-pwa` configured in `next.config.mjs`, generates service worker
 
 ## Running Locally
 
-**Frontend** (Next.js):
+**Frontend** (Vite SPA):
 ```bash
 cd frontend && bun run dev
 ```
@@ -22,25 +21,25 @@ cd backend && cargo run
 ```
 Requires `DATABASE_URL` env var (see `backend/.env.example`) and a Postgres instance.
 
-**Local dev port conflict**: Both frontend and backend default to port 3000. When running both locally, the frontend's `next dev` will auto-switch to port 3001. The `next.config.mjs` proxy rewrites `/api` to `http://127.0.0.1:8080` (for k8s port-forward). Adjust the proxy destination in `next.config.mjs` if running backend directly on port 3000.
+**Local dev port**: Frontend dev server runs on port 3001 (configured in `vite.config.ts`), backend runs on port 3000. The `vite.config.ts` dev server proxies `/api` and `/ws` to `http://127.0.0.1:3000`.
 
 **Env vars**:
-- Frontend: `NEXT_PUBLIC_API_URL` (defaults to `/api/v1`) — see `frontend/src/lib/api.ts`
+- Frontend: `VITE_API_URL` (defaults to `/api/v1`) — see `frontend/src/lib/api.ts`
 - Backend: `DATABASE_URL` — see `backend/.env.example`
 
 ## Key Architectural Facts
 
-- **Tailwind v4**: Uses `@import "tailwindcss"` + `@theme inline` in `globals.css`. No `tailwind.config.js`. Custom colors defined as CSS custom properties in `@theme inline` block.
+- **Tailwind v4**: Uses `@import "tailwindcss"` + `@theme inline` in `index.css` via `@tailwindcss/vite`.
 - **Body background**: `#131315` (matches gradient base). Theme color meta tag is `#131315`. Do NOT set `#000000`.
-- **Fonts**: Inter + Space Grotesk loaded via `next/font/google` in root `layout.tsx`. CSS variables `--font-inter` and `--font-space-grotesk`.
-- **All page components are `'use client'`** — no React Server Components used (except root `layout.tsx`).
+- **Fonts**: Inter + Space Grotesk loaded in `index.html` from Google Fonts CDN. CSS variables `--font-inter` and `--font-space-grotesk`.
+- **Routing**: React Router (`react-router-dom`). Root is `App.tsx` and entry point is `main.tsx`.
 - **Demo data**: Notes, documents, kanban, diagrams are hardcoded demo data. Frontend does NOT call the real API yet.
-- **Typecheck**: No standalone `tsc` script in `package.json`. Use `bun tsc --noEmit` from `frontend/`.
-- **API proxy**: `next.config.mjs` proxies `/api` to backend. Check the `rewrites` config when wiring up the API.
+- **Typecheck**: `bun tsc --noEmit` or `bun run build` from `frontend/`.
+- **API proxy**: `vite.config.ts` proxies `/api` and `/ws` to backend.
 
 ## Path Aliases
 
-- Frontend: `@/*` → `./src/*` (tsconfig `paths`)
+- Frontend: `@/*` → `./src/*` (tsconfig `paths` + `vite.config.ts` alias)
 
 ## Backend (Rust / Axum)
 

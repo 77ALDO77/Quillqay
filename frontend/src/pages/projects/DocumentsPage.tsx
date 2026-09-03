@@ -1,7 +1,5 @@
-'use client';
-
 import DocumentsSection from '@/components/projects/DocumentsSection';
 
-export default function ProjectDocumentsPage() {
+export default function DocumentsPage() {
   return <DocumentsSection />;
 }

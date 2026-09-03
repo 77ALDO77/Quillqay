@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+bun.lock
+
+# Build outputs
+dist/
+build/
+target/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE & Tooling
+.config/.opencode/opencode.json
+.agents/
+skills-lock.json
+.codex
+opencode.json
+.opencode/skills
+.DS_Store
+*.log

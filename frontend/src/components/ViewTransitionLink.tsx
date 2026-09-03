@@ -1,18 +1,18 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { ReactNode, useCallback, memo } from 'react';
 
 interface Props {
-  href: string;
+  href?: string;
+  to?: string;
   className?: string;
   style?: React.CSSProperties;
   children: ReactNode;
   onClick?: () => void;
 }
 
-function ViewTransitionLink({ href, className, style, children, onClick }: Props) {
-  const router = useRouter();
+function ViewTransitionLink({ href, to, className, style, children, onClick }: Props) {
+  const navigate = useNavigate();
+  const target = to || href || '#';
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -21,17 +21,17 @@ function ViewTransitionLink({ href, className, style, children, onClick }: Props
 
       if (document.startViewTransition) {
         document.startViewTransition(() => {
-          router.push(href);
+          navigate(target);
         });
       } else {
-        router.push(href);
+        navigate(target);
       }
     },
-    [href, router, onClick]
+    [target, navigate, onClick]
   );
 
   return (
-    <a href={href} onClick={handleClick} className={className} style={style}>
+    <a href={target} onClick={handleClick} className={className} style={style}>
       {children}
     </a>
   );

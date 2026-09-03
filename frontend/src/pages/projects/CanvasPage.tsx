@@ -1,7 +1,5 @@
-'use client';
-
 import CanvasSection from '@/components/projects/CanvasSection';
 
-export default function ProjectCanvasPage() {
+export default function CanvasPage() {
   return <CanvasSection />;
 }

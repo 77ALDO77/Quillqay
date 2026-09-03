@@ -1,8 +1,5 @@
-'use client';
-
 import { useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
+import { useParams, Link } from 'react-router-dom';
 import {
   ArrowRight,
   Clock3,
@@ -161,7 +158,7 @@ function DiagramCard({
         <Trash2 className="h-4 w-4" />
       </button>
       {href ? (
-        <Link href={href} className="block h-full">
+        <Link to={href} className="block h-full">
           {body}
         </Link>
       ) : (

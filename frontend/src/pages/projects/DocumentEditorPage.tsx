@@ -1,9 +1,5 @@
-'use client';
-
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import dynamic from 'next/dynamic';
+import { useCallback, useEffect, useRef, useState, Suspense, lazy } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,
@@ -22,14 +18,7 @@ import {
   type Block,
 } from '@/lib/api';
 
-const BlockEditor = dynamic(() => import('@/components/BlockEditor'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex min-h-[58vh] items-center justify-center rounded-2xl border border-white/10 bg-surface-container-lowest/80 p-8">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-    </div>
-  ),
-});
+const BlockEditor = lazy(() => import('@/components/BlockEditor'));
 
 type SaveState = 'saved' | 'saving' | 'error' | 'conflict';
 
@@ -166,7 +155,7 @@ export default function DocumentEditorPage() {
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
-          href={`/projects/${projectId}/documents`}
+          to={`/projects/${projectId}/documents`}
           className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-xs font-medium text-on-surface-variant/55 transition-colors hover:bg-white/[0.04] hover:text-on-surface-variant"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
@@ -199,7 +188,15 @@ export default function DocumentEditorPage() {
           aria-label={displayTitle}
         >
           <div className="mx-auto min-h-full max-w-6xl">
-            <BlockEditor initialData={initialBlocks} onChange={handleSave} />
+            <Suspense
+              fallback={
+                <div className="flex min-h-[58vh] items-center justify-center rounded-2xl border border-white/10 bg-surface-container-lowest/80 p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              }
+            >
+              <BlockEditor initialData={initialBlocks} onChange={handleSave} />
+            </Suspense>
           </div>
         </div>
       </div>

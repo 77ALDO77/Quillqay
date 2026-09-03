@@ -1,8 +1,5 @@
-'use client';
-
 import { useState, useCallback } from 'react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,
@@ -24,7 +21,7 @@ import EmptyState from './EmptyState';
 
 export default function DocumentsSection() {
   const params = useParams();
-  const router = useRouter();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const projectId = params.id as string;
   const [showNew, setShowNew] = useState(false);
@@ -42,7 +39,7 @@ export default function DocumentsSection() {
       await queryClient.invalidateQueries({ queryKey: ['documents', projectId] });
       setNewTitle('');
       setShowNew(false);
-      router.push(`/projects/${projectId}/documents/${document.id}`);
+      navigate(`/projects/${projectId}/documents/${document.id}`);
     },
   });
 
@@ -59,40 +56,36 @@ export default function DocumentsSection() {
     }
   }, [createMutation, newTitle]);
 
-  const docs = documentsQuery.data || [];
-
   return (
     <SectionShell
       title="Documents"
-      description="Long-form documents with rich block editing."
+      description="Long-form rich-text documents with block editor."
       action={<SectionShellAction label="New Document" onClick={() => setShowNew(true)} />}
     >
-      {documentsQuery.isPending ? (
-        <div className="flex min-h-48 items-center justify-center">
-          <Loader2 className="h-7 w-7 animate-spin text-primary" />
+      {documentsQuery.isLoading ? (
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : documentsQuery.isError ? (
-        <div className="flex min-h-48 flex-col items-center justify-center gap-3 text-center">
-          <AlertCircle className="h-7 w-7 text-error" />
-          <p className="text-sm text-on-surface-variant">
-            Documents could not be loaded.
-          </p>
+        <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+          <AlertCircle className="h-8 w-8 text-error" />
+          <p className="text-sm text-on-surface-variant">The documents could not be loaded.</p>
           <button
             onClick={() => documentsQuery.refetch()}
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
+            className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold hover:bg-white/5"
           >
-            Try again
+            Retry
           </button>
         </div>
-      ) : docs.length === 0 ? (
+      ) : !documentsQuery.data || documentsQuery.data.length === 0 ? (
         <EmptyState
           icon={FileText}
           title="No documents yet"
-          description="Create rich documents with headers, lists, code blocks, and more."
+          description="Create your first rich-text document with headers, lists, code blocks, and checklists."
           action={
             <button
               onClick={() => setShowNew(true)}
-              className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary shadow-lg shadow-primary/20 transition-all hover:saturate-150"
+              className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary shadow-lg shadow-primary/20 hover:saturate-150"
             >
               <Plus className="h-4 w-4" />
               Create Document
@@ -100,23 +93,24 @@ export default function DocumentsSection() {
           }
         />
       ) : (
-        <div className="space-y-2">
-          {docs.map((doc) => (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {documentsQuery.data.map((doc) => (
             <div
               key={doc.id}
-              className="group relative overflow-hidden rounded-xl border border-white/[0.08] transition-all duration-300 hover:border-primary/20"
-              style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.005) 100%)' }}
+              className="glass-panel group relative flex flex-col justify-between rounded-2xl border border-white/10 p-5 transition-all hover:border-primary/40 hover:bg-white/[0.04]"
             >
-              <div className="absolute -right-12 -top-12 h-24 w-24 rounded-full bg-primary/3 blur-2xl transition-all duration-500 group-hover:bg-primary/8" />
-              <div className="relative flex items-center justify-between p-4 md:p-5">
-                <div className="flex min-w-0 items-center gap-4">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-white/[0.05] bg-white/[0.03]">
-                    <FileText className="h-5 w-5 text-primary/80" />
+              <div className="flex items-start justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <FileText className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="truncate text-sm font-semibold text-on-surface md:text-base">
+                    <Link
+                      to={`/projects/${projectId}/documents/${doc.id}`}
+                      className="block truncate text-sm font-semibold text-on-surface hover:text-primary"
+                    >
                       {doc.title}
-                    </h3>
+                    </Link>
                     <div className="mt-1 flex items-center gap-3 text-[10px] font-medium text-outline">
                       <span className="flex items-center gap-1">
                         <FileText className="h-3 w-3" />
@@ -139,7 +133,7 @@ export default function DocumentsSection() {
                     <Trash2 className="h-4 w-4 text-on-surface-variant/30 hover:text-error" />
                   </button>
                   <Link
-                    href={`/projects/${projectId}/documents/${doc.id}`}
+                    to={`/projects/${projectId}/documents/${doc.id}`}
                     className="rounded-lg p-2 transition-all hover:bg-white/5"
                     aria-label={`Open "${doc.title}"`}
                   >
