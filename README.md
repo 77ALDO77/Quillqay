@@ -28,11 +28,12 @@ y diagramas conservan datos demo/locales mientras se implementan sus fases.
 
 Frontend:
 
-- Next.js 16
 - React 19
+- Vite 6
+- React Router 7
 - Tailwind CSS 4
 - Editor.js
-- React Flow
+- React Flow (@xyflow/react)
 - Monaco Editor
 - Excalidraw
 - TanStack Query
@@ -53,14 +54,13 @@ Infraestructura:
 - Dockerfile para backend
 - Docker Compose para PostgreSQL, MinIO y backend
 - Kubernetes manifests en `k8s/`
-- Configuracion PWA en el frontend
 
 ## Estructura del repositorio
 
 ```text
 .
 |-- backend/     # API Rust con Axum, SQLx y PostgreSQL
-|-- frontend/    # App Next.js con la interfaz de Quillqay
+|-- frontend/    # SPA React 19 + Vite 6 con la interfaz de Quillqay
 |-- k8s/         # Manifiestos Kubernetes
 |-- DESIGN.md    # Sistema visual Liquid Glass
 `-- AGENTS.md    # Guia tecnica para agentes y colaboradores
@@ -95,12 +95,12 @@ Tablero kanban para organizar tareas por estado y prioridad.
 | `/` | Landing page |
 | `/login` | Pantalla de login visual |
 | `/projects` | Lista de proyectos |
-| `/projects/[id]/notes` | Notas del proyecto |
-| `/projects/[id]/documents` | Documentos del proyecto |
-| `/projects/[id]/documents/[docId]` | Editor de documento |
-| `/projects/[id]/diagrams` | Hub de diagramas |
-| `/projects/[id]/diagrams/db/[diagramId]` | Editor de esquema DB |
-| `/projects/[id]/canvas` | Kanban del proyecto |
+| `/projects/:id/notes` | Notas del proyecto |
+| `/projects/:id/documents` | Documentos del proyecto |
+| `/projects/:id/documents/:docId` | Editor de documento |
+| `/projects/:id/diagrams` | Hub de diagramas |
+| `/projects/:id/diagrams/db/:diagramId` | Editor de esquema DB |
+| `/projects/:id/canvas` | Kanban del proyecto |
 
 ## Ejecutar en local
 
@@ -117,8 +117,10 @@ bun run dev
 Por defecto estara disponible en:
 
 ```text
-http://localhost:3000
+http://localhost:3001
 ```
+
+(Configurado con proxy hacia el backend en `http://127.0.0.1:3000` para `/api` y `/ws`).
 
 ### Backend
 
@@ -211,7 +213,7 @@ cargo test
 Frontend:
 
 ```bash
-NEXT_PUBLIC_API_URL=/api/v1
+VITE_API_URL=/api/v1
 ```
 
 Backend:
