@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { Loader2 } from 'lucide-react';
-import { setupDBMLLanguage } from '@/lib/dbml-language';
+import { setupDBMLLanguage } from '../core/dbml-language';
 
 const LazyMonaco = lazy(() =>
   import('@monaco-editor/react').then((mod) => ({

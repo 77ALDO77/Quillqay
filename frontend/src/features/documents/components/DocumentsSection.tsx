@@ -16,8 +16,7 @@ import {
   deleteDocument,
   listDocuments,
 } from '@/lib/api';
-import SectionShell, { SectionShellAction } from './SectionShell';
-import EmptyState from './EmptyState';
+import { SectionShell, SectionShellAction, EmptyState } from '@/features/projects';
 
 export default function DocumentsSection() {
   const params = useParams();

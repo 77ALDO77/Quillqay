@@ -1,4 +1,4 @@
-import DiagramsHub from '@/components/projects/DiagramsHub';
+import { DiagramsHub } from '@/features/projects';
 
 export default function DiagramsHubPage() {
   return <DiagramsHub />;

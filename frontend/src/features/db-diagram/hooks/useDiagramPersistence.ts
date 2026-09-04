@@ -1,9 +1,8 @@
 'use client';
 
 import { useCallback, useEffect } from 'react';
-import { useStorage } from '@/context/storage-context';
-import { useSchema } from '@/context/schema-context';
-import type { DiagramData } from '@/context/storage-context';
+import { useStorage, type DiagramData } from '../store/storage-context';
+import { useSchema } from '../store/schema-context';
 
 export function useDiagramPersistence(diagramId: string) {
   const { tables, relationships, setAllTables } = useSchema();

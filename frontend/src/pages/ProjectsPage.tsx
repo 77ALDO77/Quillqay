@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ViewTransitionLink from '@/components/ViewTransitionLink';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth';
 import {
   listProjects,
   createProject,

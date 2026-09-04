@@ -1,5 +1,4 @@
-import FlowchartEditor from '@/components/projects/FlowchartEditor';
-import FlowchartSidebar from '@/components/projects/FlowchartSidebar';
+import { FlowchartEditor, FlowchartSidebar } from '@/features/flowchart';
 
 export default function FlowchartDiagramPage() {
   return (

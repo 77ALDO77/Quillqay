@@ -7,7 +7,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Key, X, Plus } from 'lucide-react';
-import type { TableDef } from '@/types/db-schema';
+import type { TableDef } from '../../core/types';
 
 interface FieldRow {
   name: string;
