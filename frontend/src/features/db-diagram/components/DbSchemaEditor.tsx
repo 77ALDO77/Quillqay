@@ -20,19 +20,19 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Key, ExternalLink, Upload, Database, X, Code, FileJson, CheckCircle, AlertCircle, ZoomIn, ZoomOut, Scan, Undo, Redo, Table2, GitBranch, Pencil, Copy, Trash2, Save, Download } from 'lucide-react';
-import type { TableDef } from '@/types/db-schema';
-import { useSchema } from '@/context/schema-context';
-import { useDiagramLayout } from '@/context/diagram-layout-context';
-import { parseSchemaJson, parseSchemaSql } from '@/lib/schema-parser';
-import DbCanvasContextMenu, { type ContextMenuAction } from './DbCanvasContextMenu';
-import { RelationshipEdge, type RelEdge } from './RelationshipEdge';
-import MarkerDefinitions from './MarkerDefinitions';
-import { useDiagramPersistence } from '@/hooks/use-diagram-persistence';
-import { exportSQL } from '@/lib/sql-export';
-import { TableSchemaDialog } from '@/dialogs/table-schema-dialog';
-import { AreaNode, type AreaNodeType } from './AreaNode';
-import { DbTableNode, type DbTableNodeType } from './DbTableNode';
-import { sourceHandle, targetHandle } from '@/lib/handle-constants';
+import type { TableDef } from '../core/types';
+import { useSchema } from '../store/schema-context';
+import { useDiagramLayout } from '../store/diagram-layout-context';
+import { parseSchemaJson, parseSchemaSql } from '../core/schema-parser';
+import DbCanvasContextMenu, { type ContextMenuAction } from './menu/DbCanvasContextMenu';
+import { RelationshipEdge, type RelEdge } from './edges/RelationshipEdge';
+import MarkerDefinitions from './edges/MarkerDefinitions';
+import { useDiagramPersistence } from '../hooks/useDiagramPersistence';
+import { exportSQL } from '../core/sql-export';
+import { TableSchemaDialog } from './dialogs/TableSchemaDialog';
+import { AreaNode, type AreaNodeType } from './nodes/AreaNode';
+import { DbTableNode, type DbTableNodeType } from './nodes/DbTableNode';
+import { sourceHandle, targetHandle } from '../core/handle-constants';
 
 interface TableNodeData extends Record<string, unknown> {
   table: TableDef;

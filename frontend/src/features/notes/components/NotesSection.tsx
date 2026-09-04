@@ -26,8 +26,7 @@ import {
   type Note,
   type NoteColor,
 } from '@/lib/api';
-import SectionShell, { SectionShellAction } from './SectionShell';
-import EmptyState from './EmptyState';
+import { SectionShell, SectionShellAction, EmptyState } from '@/features/projects';
 
 const noteColors: NoteColor[] = ['primary', 'secondary', 'tertiary'];
 

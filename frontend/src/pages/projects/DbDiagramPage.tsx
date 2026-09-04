@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { type TableDef } from '@/types/db-schema';
-import { SchemaProvider } from '@/context/schema-context';
-import { DiagramLayoutProvider } from '@/context/diagram-layout-context';
-import { StorageProvider } from '@/context/storage-context';
-import DbSchemaEditor from '@/components/projects/DbSchemaEditor';
-import DbDiagramSidebar from '@/components/projects/DbDiagramSidebar';
+import {
+  type TableDef,
+  SchemaProvider,
+  DiagramLayoutProvider,
+  StorageProvider,
+  DbSchemaEditor,
+  DbDiagramSidebar,
+} from '@/features/db-diagram';
 
 const defaultTables: TableDef[] = [
   { name: 'pages', columns: [

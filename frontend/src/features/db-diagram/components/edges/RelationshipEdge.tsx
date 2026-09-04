@@ -2,9 +2,9 @@
 
 import { useMemo } from 'react';
 import { getSmoothStepPath, BaseEdge, Position, type Edge, type EdgeProps, type Node, useNodes } from '@xyflow/react';
-import type { RelationshipDef } from '@/types/db-schema';
+import type { RelationshipDef } from '../../core/types';
 import { getMarkerId } from './MarkerDefinitions';
-import { isLeftSource, isRightSource } from '@/lib/handle-constants';
+import { isLeftSource, isRightSource } from '../../core/handle-constants';
 
 export type RelEdge = Edge<{ relationship: RelationshipDef }, 'relationship-edge'>;
 

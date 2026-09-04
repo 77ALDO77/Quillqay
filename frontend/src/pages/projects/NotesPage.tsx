@@ -1,4 +1,4 @@
-import NotesSection from '@/components/projects/NotesSection';
+import { NotesSection } from '@/features/notes';
 
 export default function NotesPage() {
   return <NotesSection />;

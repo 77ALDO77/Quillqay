@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth';
 import {
   Terminal, Bell, LogOut, ArrowLeft,
   StickyNote, FileText, GitBranch, Columns3, PanelLeftClose, PanelLeftOpen,

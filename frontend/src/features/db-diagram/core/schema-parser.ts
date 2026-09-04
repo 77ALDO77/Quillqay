@@ -1,4 +1,4 @@
-import type { TableDef, ColumnDef } from '@/types/db-schema';
+import type { TableDef, ColumnDef } from './types';
 
 let counter = 0;
 function nextId(): string {

@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useCallback, useState, type ReactNode } from 'react';
-import type { TableDef, RelationshipDef } from '@/types/db-schema';
+import type { TableDef, RelationshipDef } from '../core/types';
 
 interface SchemaContextValue {
   tables: TableDef[];

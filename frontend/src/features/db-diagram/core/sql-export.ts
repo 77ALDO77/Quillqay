@@ -1,4 +1,4 @@
-import type { TableDef, RelationshipDef } from '@/types/db-schema';
+import type { TableDef, RelationshipDef } from './types';
 
 function quote(name: string): string {
   return `"${name}"`;

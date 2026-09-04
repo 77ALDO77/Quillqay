@@ -18,7 +18,7 @@ import {
   type Block,
 } from '@/lib/api';
 
-const BlockEditor = lazy(() => import('@/components/BlockEditor'));
+const BlockEditor = lazy(() => import('@/features/documents/components/BlockEditor'));
 
 type SaveState = 'saved' | 'saving' | 'error' | 'conflict';
 

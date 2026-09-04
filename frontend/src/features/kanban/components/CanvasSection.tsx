@@ -4,8 +4,7 @@ import { useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Columns3, X, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
-import SectionShell, { SectionShellAction } from './SectionShell';
-import EmptyState from './EmptyState';
+import { SectionShell, SectionShellAction, EmptyState } from '@/features/projects';
 import {
   listTasks,
   createTask,

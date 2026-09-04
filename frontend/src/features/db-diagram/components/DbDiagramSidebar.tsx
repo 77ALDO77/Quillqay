@@ -8,11 +8,10 @@ import {
   Plus, Trash2, X, GripVertical, Pencil, AlertCircle, Terminal, Database,
   PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
-import { useSchema } from '@/context/schema-context';
-import { useDiagramLayout } from '@/context/diagram-layout-context';
-import { parseSchemaDbml } from '@/lib/schema-parser';
+import { useSchema } from '../store/schema-context';
+import { useDiagramLayout, type SidebarSection } from '../store/diagram-layout-context';
+import { parseSchemaDbml } from '../core/schema-parser';
 import MonacoEditor from './DbmlEditor';
-import type { SidebarSection } from '@/context/diagram-layout-context';
 
 const navItems: { icon: typeof Table2; label: string; id: SidebarSection }[] = [
   { icon: Table2, label: 'Tables', id: 'tables' },

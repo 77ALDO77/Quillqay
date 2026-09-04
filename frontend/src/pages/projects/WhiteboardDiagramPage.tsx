@@ -1,4 +1,4 @@
-import WhiteboardEditor from '@/components/projects/WhiteboardEditor';
+import { WhiteboardEditor } from '@/features/whiteboard';
 
 export default function WhiteboardDiagramPage() {
   return (

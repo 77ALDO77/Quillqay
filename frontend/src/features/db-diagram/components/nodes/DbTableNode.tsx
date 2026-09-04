@@ -5,7 +5,7 @@ import { Handle, Position, useConnection, type Node, type NodeProps } from '@xyf
 import { Key, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   RIGHT_SOURCE_PREFIX, TARGET_PREFIX,
-} from '@/lib/handle-constants';
+} from '../../core/handle-constants';
 
 const TABLE_REL_SOURCE = 'table_rel_source_';
 const TABLE_REL_TARGET = 'table_rel_target_';

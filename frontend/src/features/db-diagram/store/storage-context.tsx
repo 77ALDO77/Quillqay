@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useCallback, useMemo, type ReactNode } from 'react';
 import Dexie, { type EntityTable } from 'dexie';
-import type { TableDef, RelationshipDef } from '@/types/db-schema';
+import type { TableDef, RelationshipDef } from '../core/types';
 
 export interface DiagramData {
   id: string;
