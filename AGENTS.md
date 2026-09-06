@@ -176,3 +176,4 @@ frontend/src/features/
 | Frontend build | `bun run build` | `frontend/` |
 | Frontend lint | `bun run lint` | `frontend/` |
 | Frontend typecheck | `bun tsc --noEmit` | `frontend/` |
+| Frontend E2E tests | `bun run test:e2e` | `frontend/` |
