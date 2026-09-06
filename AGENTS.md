@@ -44,7 +44,7 @@ cd frontend && bun run dev
   - **Documents**: 100% real (PostgreSQL + MinIO + Autosave + Versioning).
   - **Notes**: 100% real (PostgreSQL + TanStack Query + Colors + Pinning).
   - **Kanban / Tasks**: 100% real (PostgreSQL + TanStack Query + Drag & Drop).
-  - **Diagrams**: Local storage / schemas, canvas decoupler ready for persistence.
+  - **Diagrams**: Powered by AntV X6 (Apache 2.0, zero watermarks/attribution) with ER orthogonal routing. Local storage / schemas, canvas decoupler ready for persistence.
 - **Typecheck & Lint**: `bun tsc --noEmit`, `bun run lint`, and `bun run build` from `frontend/`.
 - **Path Aliases**: Frontend uses `@/*` → `./src/*` (configured in tsconfig and `vite.config.ts`).
 
@@ -95,10 +95,10 @@ Frontend domain modules reside in `frontend/src/features/`:
 
 ```text
 frontend/src/features/
-├── db-diagram/               # Database Schema Designer (ERD)
+├── db-diagram/               # Database Schema Designer (ERD via AntV X6 - Apache 2.0)
 │   ├── core/                 # Pure domain: types.ts, schema-parser.ts, dbml-language.ts, sql-export.ts
 │   ├── store/                # schema-context.tsx, diagram-layout-context.tsx, storage-context.tsx
-│   ├── components/           # DbSchemaEditor.tsx, DbmlEditor.tsx, DbDiagramSidebar.tsx, nodes/, edges/, dialogs/
+│   ├── components/           # DbSchemaEditor.tsx, DbCanvasX6.tsx, DbmlEditor.tsx, DbDiagramSidebar.tsx, nodes/, dialogs/
 │   ├── hooks/                # useDiagramPersistence.ts
 │   └── index.ts              # Public API barrel export
 │

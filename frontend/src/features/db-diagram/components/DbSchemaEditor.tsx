@@ -1,298 +1,50 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
-  ReactFlow,
-  Handle,
-  Position,
-  Background,
-  BackgroundVariant,
-  useNodesState,
-  useEdgesState,
-  useReactFlow,
-  ReactFlowProvider,
-  useOnViewportChange,
-  type Node,
-  type NodeProps,
-  type Connection,
-  type NodeChange,
-  type EdgeChange,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import { Key, ExternalLink, Upload, Database, X, Code, FileJson, CheckCircle, AlertCircle, ZoomIn, ZoomOut, Scan, Undo, Redo, Table2, GitBranch, Pencil, Copy, Trash2, Save, Download } from 'lucide-react';
+  Upload, Database, X, Code, FileJson, CheckCircle, AlertCircle,
+  ZoomIn, ZoomOut, Scan, Table2, GitBranch, Pencil, Copy, Trash2, Save, Download, Plus
+} from 'lucide-react';
 import type { TableDef } from '../core/types';
 import { useSchema } from '../store/schema-context';
 import { useDiagramLayout } from '../store/diagram-layout-context';
 import { parseSchemaJson, parseSchemaSql } from '../core/schema-parser';
 import DbCanvasContextMenu, { type ContextMenuAction } from './menu/DbCanvasContextMenu';
-import { RelationshipEdge, type RelEdge } from './edges/RelationshipEdge';
-import MarkerDefinitions from './edges/MarkerDefinitions';
 import { useDiagramPersistence } from '../hooks/useDiagramPersistence';
 import { exportSQL } from '../core/sql-export';
 import { TableSchemaDialog } from './dialogs/TableSchemaDialog';
-import { AreaNode, type AreaNodeType } from './nodes/AreaNode';
-import { DbTableNode, type DbTableNodeType } from './nodes/DbTableNode';
-import { sourceHandle, targetHandle } from '../core/handle-constants';
+import DbCanvasX6, { type DbCanvasX6Handle } from './DbCanvasX6';
 
-interface TableNodeData extends Record<string, unknown> {
-  table: TableDef;
+interface DbSchemaEditorProps {
+  diagramId?: string;
 }
 
-type TableFlowNode = Node<TableNodeData, 'tableNode'>;
-type SchemaFlowNode = TableFlowNode | AreaNodeType | DbTableNodeType;
-type SchemaNodeData = Partial<TableNodeData> & { label?: string };
-
-function buildNodes(tables: TableDef[]): SchemaFlowNode[] {
-  const cols = Math.ceil(Math.sqrt(tables.length));
-  let idCounter = 0;
-  return tables.map((table, i) => {
-    const nodeId = table.id || `tn${++idCounter}`;
-    return {
-      id: nodeId,
-      type: 'tableNode',
-      position: { x: 50 + (i % cols) * 380, y: 100 + Math.floor(i / cols) * 300 },
-      data: { table },
-    };
-  });
-}
-
-function getSchemaNodeData(node?: Node): SchemaNodeData {
-  return (node?.data ?? {}) as SchemaNodeData;
-}
-
-function getSchemaNodeName(node?: Node) {
-  const data = getSchemaNodeData(node);
-  return data.table?.name ?? data.label;
-}
-
-function getSchemaNodeKey(node?: Node) {
-  const data = getSchemaNodeData(node);
-  return data.table?.id ?? data.table?.name ?? data.label;
-}
-
-function TableNode({ data, selected }: NodeProps<TableFlowNode>) {
-  const { table } = data;
-
-  return (
-    <div className={`rounded-xl border transition-colors ${selected ? 'border-primary/40' : 'border-white/15'} bg-surface-container shadow-lg w-[260px] group`}>
-      <div className="h-[44px] bg-primary/15 border-b border-white/10 flex items-center px-4">
-        <span className="text-sm font-bold text-primary tracking-tight">{table.name}</span>
-      </div>
-      <div className="divide-y divide-white/5">
-        {table.columns.map((col) => {
-          return (
-            <div key={col.name} className="h-[34px] flex items-center px-4 text-xs relative hover:bg-white/[0.02] transition-colors">
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                {col.isPK ? (
-                  <Key className="w-3 h-3 text-primary shrink-0" />
-                ) : col.isFK ? (
-                  <ExternalLink className="w-3 h-3 text-secondary shrink-0" />
-                ) : (
-                  <div className="w-3 h-3 shrink-0" />
-                )}
-                <span className="text-on-surface font-mono font-medium truncate">{col.name}</span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-outline font-mono text-[10px] uppercase tracking-wider">{col.type}</span>
-                {col.nullable && (
-                  <span className="text-outline-variant/40 text-[10px] font-medium">NULL</span>
-                )}
-              </div>
-
-              {/* Source handle — RIGHT */}
-              <Handle
-                type="source"
-                position={Position.Right}
-                id={`right_rel_${col.name}`}
-                style={{
-                  top: '50%',
-                  transform: 'translate(50%, -50%)',
-                  background: col.isFK ? '#d3fbff' : '#cdc2d7',
-                  border: '2px solid #201f21',
-                  width: 10,
-                  height: 10,
-                }}
-                className="!opacity-0 shadow-[0_0_0_4px_rgba(211,251,255,0.08)] transition-opacity group-hover:!opacity-100"
-              />
-              {/* Target handle — only for PK columns */}
-              {col.isPK && (
-                <Handle
-                  type="target"
-                  position={Position.Left}
-                  id={`target_rel_0_${col.name}`}
-                  style={{
-                    top: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    background: '#d6baff',
-                    border: '2px solid #201f21',
-                    width: 10,
-                    height: 10,
-                  }}
-                  className="!opacity-0 shadow-[0_0_0_4px_rgba(214,186,255,0.08)] transition-opacity group-hover:!opacity-100"
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-const nodeTypes = { tableNode: TableNode, area: AreaNode, demoTable: DbTableNode };
-const edgeTypes = { 'relationship-edge': RelationshipEdge };
-
-function EditorInner({ diagramId }: { diagramId?: string }) {
-  const { tables: contextTables, relationships, createRelationship, removeRelationship, setAllTables, addTable, removeTable } = useSchema();
+export default function DbSchemaEditor({ diagramId }: DbSchemaEditorProps) {
+  const {
+    tables: contextTables,
+    relationships,
+    createRelationship,
+    removeRelationship,
+    setAllTables,
+    addTable,
+    removeTable
+  } = useSchema();
   const { selectSection } = useDiagramLayout();
-  const reactFlowInstance = useReactFlow();
-  const [nodes, setNodes, onNodesChange] = useNodesState<SchemaFlowNode>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<RelEdge>([]);
+  const canvasRef = useRef<DbCanvasX6Handle>(null);
+
   const [zoomLevel, setZoomLevel] = useState('100%');
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
-  const historyRef = useRef<{ past: SchemaFlowNode[][]; future: SchemaFlowNode[][] }>({ past: [], future: [] });
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuAction[] } | null>(null);
 
-  useOnViewportChange({
-    onChange: ({ zoom }) => setZoomLevel(`${Math.round(zoom * 100)}%`),
-  });
-
-  // Build node IDs lookup
-  const nodeIdByTable = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const node of nodes) {
-      const tableName = getSchemaNodeData(node).table?.name;
-      if (tableName) map.set(tableName, node.id);
-    }
-    return map;
-  }, [nodes]);
-
-  // Derive edges from relationships
-  useEffect(() => {
-    const newEdges: RelEdge[] = relationships.map((rel) => {
-      const source = nodeIdByTable.get(rel.sourceTable);
-      const target = nodeIdByTable.get(rel.targetTable);
-      if (!source || !target) return null;
-      return {
-        id: rel.id,
-        source,
-        target,
-        sourceHandle: sourceHandle(rel.sourceField, 'right'),
-        targetHandle: targetHandle(rel.targetField, 0),
-        type: 'relationship-edge',
-        data: { relationship: rel },
-      } as RelEdge;
-    }).filter(Boolean) as RelEdge[];
-    setEdges(newEdges);
-  }, [relationships, nodeIdByTable, setEdges]);
-
-  const pushHistory = useCallback((prevNodes: SchemaFlowNode[]) => {
-    historyRef.current.past.push(prevNodes);
-    historyRef.current.future = [];
-    setCanUndo(true);
-    setCanRedo(false);
-  }, []);
-
-  const handleNodesChange = useCallback((changes: NodeChange<SchemaFlowNode>[]) => {
-    const hasDragged = changes.some((c) => c.type === 'position' && c.dragging === false);
-    if (hasDragged) pushHistory(nodes);
-    onNodesChange(changes);
-  }, [nodes, pushHistory, onNodesChange]);
-
-  const handleEdgesChange = useCallback((changes: EdgeChange<RelEdge>[]) => {
-    const removed = changes.filter((c) => c.type === 'remove');
-    removed.forEach((c) => removeRelationship(c.id));
-    onEdgesChange(changes);
-  }, [onEdgesChange, removeRelationship]);
-
-  const handleUndo = useCallback(() => {
-    const { past, future } = historyRef.current;
-    if (past.length === 0) return;
-    const previous = past[past.length - 1];
-    historyRef.current.past = past.slice(0, -1);
-    historyRef.current.future = [nodes, ...future];
-    setNodes(previous);
-    setCanUndo(historyRef.current.past.length > 0);
-    setCanRedo(true);
-  }, [nodes, setNodes]);
-
-  const handleRedo = useCallback(() => {
-    const { past, future } = historyRef.current;
-    if (future.length === 0) return;
-    const next = future[0];
-    historyRef.current.future = future.slice(1);
-    historyRef.current.past = [...past, nodes];
-    setNodes(next);
-    setCanRedo(historyRef.current.future.length > 0);
-    setCanUndo(true);
-  }, [nodes, setNodes]);
-
-  // Load tables and auto-create relationships from FK definitions
-  const loadTables = useCallback((tables: TableDef[]) => {
-    const newNodes = buildNodes(tables);
-    setNodes(newNodes);
-    historyRef.current = { past: [], future: [] };
-    setCanUndo(false);
-    setCanRedo(false);
-    // Auto-create relationships from FK columns
-    for (const table of tables) {
-      for (const col of table.columns) {
-        if (col.isFK && col.references) {
-          createRelationship(table.name, col.name, col.references.table, col.references.column);
-        }
-      }
-    }
-    setTimeout(() => reactFlowInstance.fitView({ duration: 300 }), 100);
-  }, [setNodes, reactFlowInstance, createRelationship]);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => loadTables(contextTables), 0);
-    return () => window.clearTimeout(timeoutId);
-  }, [contextTables, loadTables]);
-
-  // onConnect: create relationship from drag
-  const onConnect = useCallback((params: Connection) => {
-    const srcField = params.sourceHandle
-      ? params.sourceHandle.replace(/^(left_rel_|right_rel_|src_)/, '')
-      : '';
-    const tgtField = params.targetHandle
-      ? params.targetHandle.replace(/^target_rel_\d+_/, '')
-      : '';
-    if (!srcField || !tgtField) return;
-    const sourceNode = nodes.find((n) => n.id === params.source);
-    const targetNode = nodes.find((n) => n.id === params.target);
-    const sourceTable = getSchemaNodeName(sourceNode);
-    const targetTable = getSchemaNodeName(targetNode);
-    if (!sourceTable || !targetTable) return;
-    createRelationship(sourceTable, srcField, targetTable, tgtField);
-  }, [nodes, createRelationship]);
-
+  // Import modal state
   const [showImport, setShowImport] = useState(false);
   const [importMode, setImportMode] = useState<'json' | 'sql'>('json');
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
   const [importSuccess, setImportSuccess] = useState(false);
 
-  const handleImport = useCallback(() => {
-    setImportError('');
-    setImportSuccess(false);
-    try {
-      const trimmed = importText.trim();
-      if (!trimmed) { setImportError('Please enter schema data'); return; }
-      const parsed = importMode === 'json' ? parseSchemaJson(trimmed) : parseSchemaSql(trimmed);
-      if (parsed.length === 0) { setImportError('No tables found in input'); return; }
-      setAllTables(parsed);
-      setImportSuccess(true);
-      setTimeout(() => setShowImport(false), 800);
-    } catch (e: unknown) {
-      setImportError(e instanceof Error ? e.message : 'Failed to parse schema');
-    }
-  }, [importText, importMode, setAllTables]);
-
-  // Table Schema Dialog
+  // Table Schema Dialog state
   const [schemaDialogOpen, setSchemaDialogOpen] = useState(false);
-  const [editingTable] = useState<TableDef | undefined>(undefined);
+  const [editingTable, setEditingTable] = useState<TableDef | undefined>(undefined);
 
   // Persistence
   const { save } = useDiagramPersistence(diagramId || 'default');
@@ -314,20 +66,130 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
     navigator.clipboard.writeText(sql);
   }, [contextTables, relationships]);
 
+  const handleImport = useCallback(() => {
+    setImportError('');
+    setImportSuccess(false);
+    try {
+      const trimmed = importText.trim();
+      if (!trimmed) {
+        setImportError('Please enter schema data');
+        return;
+      }
+      const parsed = importMode === 'json' ? parseSchemaJson(trimmed) : parseSchemaSql(trimmed);
+      if (parsed.length === 0) {
+        setImportError('No tables found in input');
+        return;
+      }
+      setAllTables(parsed);
+      setImportSuccess(true);
+      setTimeout(() => setShowImport(false), 800);
+      setTimeout(() => canvasRef.current?.zoomToFit(), 300);
+    } catch (e: unknown) {
+      setImportError(e instanceof Error ? e.message : 'Failed to parse schema');
+    }
+  }, [importText, importMode, setAllTables]);
+
+  const handleZoomChange = useCallback((zoom: number) => {
+    setZoomLevel(`${Math.round(zoom * 100)}%`);
+  }, []);
+
+  const handleNodeContextMenu = useCallback((e: React.MouseEvent | MouseEvent, table: TableDef) => {
+    const tableIndex = contextTables.findIndex((t) => t.name === table.name);
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        {
+          id: 'edit',
+          label: 'Edit Table',
+          icon: Pencil,
+          onSelect: () => {
+            setEditingTable(table);
+            setSchemaDialogOpen(true);
+          },
+        },
+        {
+          id: 'duplicate',
+          label: 'Duplicate Table',
+          icon: Copy,
+          onSelect: () => {
+            addTable(`${table.name}_copy`);
+          },
+        },
+        {
+          id: 'delete',
+          label: 'Delete Table',
+          icon: Trash2,
+          danger: true,
+          onSelect: () => {
+            if (tableIndex >= 0) removeTable(tableIndex);
+          },
+        },
+      ],
+    });
+  }, [contextTables, addTable, removeTable]);
+
+  const handleBlankContextMenu = useCallback((e: React.MouseEvent | MouseEvent) => {
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        {
+          id: 'new-table',
+          label: 'New Table',
+          icon: Table2,
+          onSelect: () => {
+            setEditingTable(undefined);
+            setSchemaDialogOpen(true);
+          },
+        },
+        {
+          id: 'import',
+          label: 'Import SQL / JSON',
+          icon: Upload,
+          onSelect: () => {
+            setShowImport(true);
+            setImportError('');
+            setImportSuccess(false);
+            setImportText('');
+          },
+        },
+        {
+          id: 'fit-view',
+          label: 'Fit to View',
+          icon: Scan,
+          onSelect: () => {
+            canvasRef.current?.zoomToFit();
+          },
+        },
+      ],
+    });
+  }, []);
+
   const importPlaceholder = importMode === 'json'
     ? '[{"name":"users","columns":[{"name":"id","type":"UUID","isPK":true}]}]'
     : 'CREATE TABLE users (\n  id UUID PRIMARY KEY,\n  email VARCHAR(255) NOT NULL\n);';
 
-  const zoomDuration = 200;
-
   return (
     <div className="relative h-full w-full min-w-0 overflow-hidden rounded-[20px] bg-surface-container-lowest/85">
       {/* Top toolbar */}
-      <div className="absolute left-4 right-4 top-4 z-10 flex flex-wrap items-center gap-2">
+      <div className="absolute left-4 right-4 top-4 z-10 flex flex-wrap items-center gap-2 pointer-events-auto">
         <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/[0.08] px-3 py-2 text-xs font-bold text-on-surface backdrop-blur-xl">
           <Database className="h-3.5 w-3.5 text-primary" />
-          Project schema
+          Project schema (AntV X6)
         </div>
+
+        <button
+          onClick={() => {
+            setEditingTable(undefined);
+            setSchemaDialogOpen(true);
+          }}
+          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-surface-container/85 px-3 py-2 text-xs font-bold text-on-surface-variant backdrop-blur-xl transition-colors hover:bg-surface-container-high hover:text-on-surface"
+        >
+          <Plus className="w-3.5 h-3.5 text-primary" />
+          Add Table
+        </button>
+
         <button
           onClick={() => { setShowImport(true); setImportError(''); setImportSuccess(false); setImportText(''); }}
           className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-surface-container/85 px-3 py-2 text-xs font-bold text-on-surface-variant backdrop-blur-xl transition-colors hover:bg-surface-container-high hover:text-on-surface"
@@ -335,6 +197,7 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
           <Upload className="w-3.5 h-3.5 text-secondary" />
           Import Schema
         </button>
+
         <button
           onClick={handleSave}
           className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-surface-container/85 px-3 py-2 text-xs font-bold text-on-surface-variant backdrop-blur-xl transition-colors hover:bg-surface-container-high hover:text-on-surface"
@@ -342,63 +205,30 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
           <Save className="w-3.5 h-3.5 text-secondary" />
           {saveStatus === 'saved' ? 'Saved!' : 'Save'}
         </button>
+
         <button
           onClick={handleExportSQL}
           className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-surface-container/85 px-3 py-2 text-xs font-bold text-on-surface-variant backdrop-blur-xl transition-colors hover:bg-surface-container-high hover:text-on-surface"
+          title="Copy SQL DDL to clipboard"
         >
           <Download className="w-3.5 h-3.5 text-primary" />
           SQL
         </button>
       </div>
 
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={handleNodesChange}
-        onEdgesChange={handleEdgesChange}
-        onConnect={onConnect}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        fitView
-        colorMode="dark"
-        minZoom={0.3}
-        maxZoom={2}
-        panOnDrag={[2]}
-        panOnScroll={false}
-        onPaneContextMenu={(e) => {
-          e.preventDefault();
-          setContextMenu({
-            x: e.clientX, y: e.clientY,
-            items: [
-              { id: 'new-table', label: 'New Table', icon: Table2, onSelect: () => addTable() },
-              { id: 'new-relationship', label: 'New Relationship', icon: GitBranch, onSelect: () => {} },
-              { id: 'import', label: 'Import SQL/DBML', icon: Upload, onSelect: () => { setShowImport(true); setImportError(''); setImportSuccess(false); setImportText(''); } },
-            ],
-          });
-        }}
-        onNodeContextMenu={(e, node) => {
-          e.preventDefault();
-          const tableKey = getSchemaNodeKey(node);
-          const tableName = getSchemaNodeName(node);
-          const tableIndex = contextTables.findIndex((t) => (t.id || t.name) === tableKey);
-          setContextMenu({
-            x: e.clientX, y: e.clientY,
-            items: [
-              { id: 'edit', label: 'Edit Table', icon: Pencil, onSelect: () => { selectSection('tables'); } },
-              { id: 'duplicate', label: 'Duplicate Table', icon: Copy, onSelect: () => { if (tableName) addTable(`${tableName}_copy`); } },
-              { id: 'delete', label: 'Delete Table', icon: Trash2, danger: true, onSelect: () => { if (tableIndex >= 0) removeTable(tableIndex); } },
-            ],
-          });
-        }}
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={20}
-          size={1}
-          color="rgba(255,255,255,0.05)"
+      {/* AntV X6 Canvas */}
+      <div className="w-full h-full">
+        <DbCanvasX6
+          tables={contextTables}
+          relationships={relationships}
+          onCreateRelationship={createRelationship}
+          onRemoveRelationship={removeRelationship}
+          onZoomChange={handleZoomChange}
+          onNodeContextMenu={handleNodeContextMenu}
+          onBlankContextMenu={handleBlankContextMenu}
+          canvasRef={canvasRef}
         />
-        <MarkerDefinitions />
-      </ReactFlow>
+      </div>
 
       {/* Context Menu */}
       {contextMenu && (
@@ -410,25 +240,25 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
         />
       )}
 
-      {/* Bottom toolbar */}
+      {/* Bottom Zoom & View Controls */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
         <div className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-surface-container/90 backdrop-blur-xl border border-white/10 shadow-lg">
           <button
-            onClick={() => reactFlowInstance.zoomOut({ duration: zoomDuration })}
+            onClick={() => canvasRef.current?.zoomOut()}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant/60 hover:bg-white/5 hover:text-on-surface-variant transition-all"
             title="Zoom Out"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
           <button
-            onClick={() => reactFlowInstance.fitView({ duration: zoomDuration })}
+            onClick={() => canvasRef.current?.zoomReset()}
             className="w-[52px] h-8 rounded-lg flex items-center justify-center text-xs font-semibold text-on-surface-variant/80 hover:bg-white/5 transition-all font-mono tabular-nums"
-            title="Fit View"
+            title="Reset to 100%"
           >
             {zoomLevel}
           </button>
           <button
-            onClick={() => reactFlowInstance.zoomIn({ duration: zoomDuration })}
+            onClick={() => canvasRef.current?.zoomIn()}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant/60 hover:bg-white/5 hover:text-on-surface-variant transition-all"
             title="Zoom In"
           >
@@ -438,30 +268,11 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
           <div className="w-px h-6 bg-white/10 mx-1" />
 
           <button
-            onClick={() => reactFlowInstance.fitView({ duration: 300, padding: 0.15 })}
+            onClick={() => canvasRef.current?.zoomToFit()}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant/60 hover:bg-white/5 hover:text-on-surface-variant transition-all"
-            title="Fit View"
+            title="Fit to Screen"
           >
             <Scan className="w-4 h-4" />
-          </button>
-
-          <div className="w-px h-6 bg-white/10 mx-1" />
-
-          <button
-            onClick={handleUndo}
-            disabled={!canUndo}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant/60 hover:bg-white/5 hover:text-on-surface-variant transition-all disabled:opacity-20 disabled:cursor-not-allowed"
-            title="Undo"
-          >
-            <Undo className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleRedo}
-            disabled={!canRedo}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant/60 hover:bg-white/5 hover:text-on-surface-variant transition-all disabled:opacity-20 disabled:cursor-not-allowed"
-            title="Redo"
-          >
-            <Redo className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -551,17 +362,5 @@ function EditorInner({ diagramId }: { diagramId?: string }) {
         </div>
       )}
     </div>
-  );
-}
-
-interface DbSchemaEditorProps {
-  diagramId?: string;
-}
-
-export default function DbSchemaEditor({ diagramId }: DbSchemaEditorProps) {
-  return (
-    <ReactFlowProvider>
-      <EditorInner diagramId={diagramId} />
-    </ReactFlowProvider>
   );
 }

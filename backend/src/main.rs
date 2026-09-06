@@ -65,8 +65,14 @@ pub struct AppState {
     pub readiness_service: ReadinessService,
     pub storage: Arc<dyn ObjectStorage>,
     pub cookie: SessionCookieConfig,
-    pub allowed_origin: HeaderValue,
+    pub allowed_origins: Vec<HeaderValue>,
     pub tx: broadcast::Sender<String>,
+}
+
+impl AppState {
+    pub fn is_origin_allowed(&self, origin: &HeaderValue) -> bool {
+        self.allowed_origins.iter().any(|allowed| allowed == origin)
+    }
 }
 
 #[tokio::main]
@@ -133,7 +139,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.limits.document_max_blocks,
     );
     let cleanup_service = StorageCleanupService::new(repository, storage.clone());
-    let allowed_origin = config.server.allowed_origin.parse::<HeaderValue>()?;
+    let mut allowed_origins = Vec::new();
+    for part in config.server.allowed_origin.split(',') {
+        let trimmed = part.trim();
+        if !trimmed.is_empty() {
+            if let Ok(val) = HeaderValue::from_str(trimmed) {
+                if !allowed_origins.contains(&val) {
+                    allowed_origins.push(val);
+                }
+            }
+            if trimmed.contains("localhost") {
+                let alt = trimmed.replace("localhost", "127.0.0.1");
+                if let Ok(val) = HeaderValue::from_str(&alt) {
+                    if !allowed_origins.contains(&val) {
+                        allowed_origins.push(val);
+                    }
+                }
+            } else if trimmed.contains("127.0.0.1") {
+                let alt = trimmed.replace("127.0.0.1", "localhost");
+                if let Ok(val) = HeaderValue::from_str(&alt) {
+                    if !allowed_origins.contains(&val) {
+                        allowed_origins.push(val);
+                    }
+                }
+            }
+        }
+    }
     let (tx, _receiver) = broadcast::channel(100);
 
     let app_state = Arc::new(AppState {
@@ -149,12 +180,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             secure: config.security.cookie_secure,
             ttl_hours: config.security.session_ttl_hours,
         },
-        allowed_origin: allowed_origin.clone(),
+        allowed_origins: allowed_origins.clone(),
         tx,
     });
 
+    let cors_origins = allowed_origins.clone();
     let cors = CorsLayer::new()
-        .allow_origin(AllowOrigin::exact(allowed_origin))
+        .allow_origin(AllowOrigin::predicate(move |origin: &HeaderValue, _| {
+            cors_origins.iter().any(|allowed| allowed == origin)
+        }))
         .allow_credentials(true)
         .allow_methods([
             Method::GET,

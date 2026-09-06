@@ -1,5 +1,5 @@
 use crate::{
-    domain::entities::Note,
+    domain::{entities::Note, events::RealtimeEvent},
     AppState,
 };
 use axum::{
@@ -59,6 +59,17 @@ pub async fn create_note(
             payload.pinned,
         )
         .await?;
+
+    let event = RealtimeEvent::new(
+        "note:created",
+        project_id,
+        note.id,
+        serde_json::to_value(&note).unwrap_or_default(),
+    );
+    if let Ok(json) = event.to_json_string() {
+        let _ = state.tx.send(json);
+    }
+
     Ok((StatusCode::CREATED, Json(note)))
 }
 
@@ -81,6 +92,17 @@ pub async fn update_note(
             payload.pinned,
         )
         .await?;
+
+    let event = RealtimeEvent::new(
+        "note:updated",
+        project_id,
+        note.id,
+        serde_json::to_value(&note).unwrap_or_default(),
+    );
+    if let Ok(json) = event.to_json_string() {
+        let _ = state.tx.send(json);
+    }
+
     Ok(Json(note))
 }
 
@@ -91,5 +113,16 @@ pub async fn delete_note(
 ) -> Result<StatusCode, ApiError> {
     let Path((project_id, note_id)) = path.map_err(ApiError::from)?;
     state.note_service.delete(user.id, project_id, note_id).await?;
+
+    let event = RealtimeEvent::new(
+        "note:deleted",
+        project_id,
+        note_id,
+        serde_json::Value::Null,
+    );
+    if let Ok(json) = event.to_json_string() {
+        let _ = state.tx.send(json);
+    }
+
     Ok(StatusCode::NO_CONTENT)
 }

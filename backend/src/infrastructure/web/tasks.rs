@@ -1,5 +1,5 @@
 use crate::{
-    domain::entities::Task,
+    domain::{entities::Task, events::RealtimeEvent},
     AppState,
 };
 use axum::{
@@ -65,6 +65,17 @@ pub async fn create_task(
             payload.order_index,
         )
         .await?;
+
+    let event = RealtimeEvent::new(
+        "task:created",
+        project_id,
+        task.id,
+        serde_json::to_value(&task).unwrap_or_default(),
+    );
+    if let Ok(json) = event.to_json_string() {
+        let _ = state.tx.send(json);
+    }
+
     Ok((StatusCode::CREATED, Json(task)))
 }
 
@@ -89,6 +100,17 @@ pub async fn update_task(
             payload.order_index,
         )
         .await?;
+
+    let event = RealtimeEvent::new(
+        "task:updated",
+        project_id,
+        task.id,
+        serde_json::to_value(&task).unwrap_or_default(),
+    );
+    if let Ok(json) = event.to_json_string() {
+        let _ = state.tx.send(json);
+    }
+
     Ok(Json(task))
 }
 
@@ -99,5 +121,16 @@ pub async fn delete_task(
 ) -> Result<StatusCode, ApiError> {
     let Path((project_id, task_id)) = path.map_err(ApiError::from)?;
     state.task_service.delete(user.id, project_id, task_id).await?;
+
+    let event = RealtimeEvent::new(
+        "task:deleted",
+        project_id,
+        task_id,
+        serde_json::Value::Null,
+    );
+    if let Ok(json) = event.to_json_string() {
+        let _ = state.tx.send(json);
+    }
+
     Ok(StatusCode::NO_CONTENT)
 }

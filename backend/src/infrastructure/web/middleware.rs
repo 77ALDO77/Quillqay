@@ -25,7 +25,7 @@ pub async fn validate_origin(
     let origin_is_valid = request
         .headers()
         .get(axum::http::header::ORIGIN)
-        .is_some_and(|origin| origin == &state.allowed_origin);
+        .is_some_and(|origin| state.is_origin_allowed(origin));
 
     if !origin_is_valid {
         return ApiError::from(DomainError::InvalidOrigin).into_response();

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
+import { useProjectSocket } from '@/hooks/useProjectSocket';
 import {
   Terminal, Bell, LogOut, ArrowLeft,
   StickyNote, FileText, GitBranch, Columns3, PanelLeftClose, PanelLeftOpen,
@@ -21,6 +22,7 @@ export default function ProjectLayout() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { id = '' } = useParams<{ id: string }>();
+  const { status: socketStatus } = useProjectSocket(id);
   const location = useLocation();
   const pathname = location.pathname;
   const [mounted, setMounted] = useState(false);
@@ -75,6 +77,29 @@ export default function ProjectLayout() {
         </span>
 
         <div className="flex items-center gap-2 md:gap-4">
+          {/* Realtime WebSocket Status */}
+          <div
+            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border backdrop-blur-md transition-all ${
+              socketStatus === 'connected'
+                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20 shadow-[0_0_12px_rgba(52,211,153,0.15)]'
+                : socketStatus === 'connecting'
+                ? 'bg-amber-500/10 text-amber-300 border-amber-500/20 animate-pulse'
+                : 'bg-rose-500/10 text-rose-300 border-rose-500/20'
+            }`}
+            title={`Real-time sync: ${socketStatus}`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                socketStatus === 'connected'
+                  ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
+                  : socketStatus === 'connecting'
+                  ? 'bg-amber-400'
+                  : 'bg-rose-400'
+              }`}
+            />
+            <span>{socketStatus === 'connected' ? 'Live' : socketStatus === 'connecting' ? 'Connecting...' : 'Offline'}</span>
+          </div>
+
           <button className="p-2 rounded-full hover:bg-white/5 transition-all text-on-surface-variant/50" aria-label="Notifications">
             <Bell className="w-4 md:w-5 h-4 md:h-5" />
           </button>
