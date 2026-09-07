@@ -187,19 +187,23 @@ function TablesSection() {
 /* ---------- Refs Section ---------- */
 
 function RefsSection() {
+  const { relationships } = useSchema();
   const [filter, setFilter] = useState('');
-  const demoRefs = [
-    { name: 'dept_emp_ibfk_1', src: 'dept_emp.emp_no', dst: 'employees.id', color: '#d6baff' },
-    { name: 'dept_emp_ibfk_2', src: 'dept_emp.dept_no', dst: 'departments.id', color: '#d3fbff' },
-    { name: 'dept_manager_ibfk_1', src: 'dept_manager.emp_no', dst: 'employees.id', color: '#ffb0cb' },
-    { name: 'dept_manager_ibfk_2', src: 'dept_manager.dept_no', dst: 'departments.id', color: '#d6baff' },
-    { name: 'salaries_ibfk_1', src: 'salaries.emp_no', dst: 'employees.id', color: '#d3fbff' },
-    { name: 'titles_ibfk_1', src: 'titles.emp_no', dst: 'employees.id', color: '#ffb0cb' },
-  ];
 
-  const filtered = demoRefs.filter((r) =>
+  const realRefs = useMemo(() => {
+    const colors = ['#d6baff', '#d3fbff', '#ffb0cb', '#86efac', '#fde047'];
+    return relationships.map((rel, idx) => ({
+      name: `${rel.sourceTable}_${rel.sourceField}_fk`,
+      src: `${rel.sourceTable}.${rel.sourceField}`,
+      dst: `${rel.targetTable}.${rel.targetField}`,
+      color: colors[idx % colors.length],
+    }));
+  }, [relationships]);
+
+  const filtered = realRefs.filter((r) =>
     r.name.toLowerCase().includes(filter.toLowerCase()) ||
-    r.src.toLowerCase().includes(filter.toLowerCase())
+    r.src.toLowerCase().includes(filter.toLowerCase()) ||
+    r.dst.toLowerCase().includes(filter.toLowerCase())
   );
 
   const [opened, setOpened] = useState<string | null>(null);
@@ -414,11 +418,12 @@ function VisualsSection() {
 /* ---------- Main Sidebar ---------- */
 
 interface DbDiagramSidebarProps {
+  diagramTitle?: string;
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
 }
 
-export default function DbDiagramSidebar({ collapsed = false, onToggleCollapsed }: DbDiagramSidebarProps) {
+export default function DbDiagramSidebar({ diagramTitle, collapsed = false, onToggleCollapsed }: DbDiagramSidebarProps) {
   const { selectedSection, selectSection } = useDiagramLayout();
   const { addTable } = useSchema();
 
@@ -484,7 +489,7 @@ export default function DbDiagramSidebar({ collapsed = false, onToggleCollapsed 
               <Terminal className="h-4 w-4 text-on-primary-container" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-bold text-on-surface">Qillqay Schema</div>
+              <div className="truncate text-sm font-bold text-on-surface">{diagramTitle || 'Database Schema'}</div>
               <div className="mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant/45">
                 <Database className="h-3 w-3 text-secondary/70" />
                 Database diagram

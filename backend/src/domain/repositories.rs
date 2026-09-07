@@ -1,8 +1,8 @@
 use crate::domain::{
     entities::{
-        Document, DocumentVersion, NewDocument, NewNote, NewProject, NewTask, Note, NoteChanges,
-        PendingDocumentVersion, Project, ProjectChanges, StorageCleanupJob, Task, TaskChanges,
-        User, UserWithPassword,
+        Diagram, DiagramChanges, Document, DocumentVersion, NewDiagram, NewDocument, NewNote,
+        NewProject, NewTask, Note, NoteChanges, PendingDocumentVersion, Project, ProjectChanges,
+        StorageCleanupJob, Task, TaskChanges, User, UserWithPassword,
     },
     errors::DomainError,
 };
@@ -200,5 +200,40 @@ pub trait TaskRepository: Send + Sync {
         task_id: Uuid,
     ) -> Result<bool, DomainError>;
 }
+
+#[async_trait]
+pub trait DiagramRepository: Send + Sync {
+    async fn list_diagrams(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        diagram_type: Option<&str>,
+    ) -> Result<Vec<Diagram>, DomainError>;
+    async fn create_diagram(
+        &self,
+        owner_id: Uuid,
+        diagram: NewDiagram,
+    ) -> Result<Option<Diagram>, DomainError>;
+    async fn get_diagram(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        diagram_id: Uuid,
+    ) -> Result<Option<Diagram>, DomainError>;
+    async fn update_diagram(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        diagram_id: Uuid,
+        changes: DiagramChanges,
+    ) -> Result<Option<Diagram>, DomainError>;
+    async fn delete_diagram(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        diagram_id: Uuid,
+    ) -> Result<bool, DomainError>;
+}
+
 
 

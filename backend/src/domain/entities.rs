@@ -186,3 +186,31 @@ pub struct TaskChanges {
     pub order_index: Option<i32>,
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Diagram {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub title: String,
+    pub diagram_type: String,
+    pub content: Value,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug)]
+pub struct NewDiagram {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub title: String,
+    pub diagram_type: String,
+    pub content: Value,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct DiagramChanges {
+    pub title: Option<String>,
+    pub content: Option<Value>,
+}
+
+

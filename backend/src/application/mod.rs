@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod diagrams;
 pub mod documents;
 pub mod notes;
 pub mod projects;

@@ -54,6 +54,8 @@ export function useProjectSocket(projectId?: string) {
               queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
             } else if (data.event.startsWith('note:')) {
               queryClient.invalidateQueries({ queryKey: ['notes', projectId] });
+            } else if (data.event.startsWith('diagram:')) {
+              queryClient.invalidateQueries({ queryKey: ['diagrams', projectId] });
             }
           }
         } catch {

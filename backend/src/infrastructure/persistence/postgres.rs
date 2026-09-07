@@ -1,12 +1,13 @@
 use crate::domain::{
     entities::{
-        Document, DocumentVersion, NewDocument, NewNote, NewProject, NewTask, Note, NoteChanges,
-        PendingDocumentVersion, Project, ProjectChanges, StorageCleanupJob, Task, TaskChanges,
-        User, UserWithPassword,
+        Diagram, DiagramChanges, Document, DocumentVersion, NewDiagram, NewDocument, NewNote,
+        NewProject, NewTask, Note, NoteChanges, PendingDocumentVersion, Project, ProjectChanges,
+        StorageCleanupJob, Task, TaskChanges, User, UserWithPassword,
     },
     errors::DomainError,
     repositories::{
-        DocumentRepository, NoteRepository, ProjectRepository, TaskRepository, UserRepository,
+        DiagramRepository, DocumentRepository, NoteRepository, ProjectRepository, TaskRepository,
+        UserRepository,
     },
 };
 use async_trait::async_trait;
@@ -170,6 +171,31 @@ impl From<TaskRow> for Task {
     }
 }
 
+#[derive(FromRow)]
+struct DiagramRow {
+    id: Uuid,
+    project_id: Uuid,
+    title: String,
+    diagram_type: String,
+    content: serde_json::Value,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
+impl From<DiagramRow> for Diagram {
+    fn from(row: DiagramRow) -> Self {
+        Self {
+            id: row.id,
+            project_id: row.project_id,
+            title: row.title,
+            diagram_type: row.diagram_type,
+            content: row.content,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        }
+    }
+}
+
 impl From<StorageCleanupJobRow> for StorageCleanupJob {
     fn from(row: StorageCleanupJobRow) -> Self {
         Self {
@@ -271,6 +297,12 @@ const TASK_SELECT: &str = r#"
     SELECT t.id, t.project_id, t.title, t.description, t.status, t.priority, t.order_index, t.created_at, t.updated_at
     FROM tasks t
     INNER JOIN projects p ON p.id = t.project_id
+"#;
+
+const DIAGRAM_SELECT: &str = r#"
+    SELECT d.id, d.project_id, d.title, d.diagram_type, d.content, d.created_at, d.updated_at
+    FROM diagrams d
+    INNER JOIN projects p ON p.id = d.project_id
 "#;
 
 #[async_trait]
@@ -1183,5 +1215,160 @@ impl TaskRepository for PostgresRepository {
         Ok(result.rows_affected() > 0)
     }
 }
+
+#[async_trait]
+impl DiagramRepository for PostgresRepository {
+    async fn list_diagrams(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        diagram_type: Option<&str>,
+    ) -> Result<Vec<Diagram>, DomainError> {
+        let rows = match diagram_type {
+            Some(dtype) => {
+                let query = format!(
+                    "{DIAGRAM_SELECT}
+                     WHERE p.owner_id = $1
+                       AND p.id = $2
+                       AND d.diagram_type = $3
+                       AND p.deleted_at IS NULL
+                     ORDER BY d.updated_at DESC"
+                );
+                sqlx::query_as::<_, DiagramRow>(&query)
+                    .bind(owner_id)
+                    .bind(project_id)
+                    .bind(dtype)
+                    .fetch_all(&self.pool)
+                    .await?
+            }
+            None => {
+                let query = format!(
+                    "{DIAGRAM_SELECT}
+                     WHERE p.owner_id = $1
+                       AND p.id = $2
+                       AND p.deleted_at IS NULL
+                     ORDER BY d.updated_at DESC"
+                );
+                sqlx::query_as::<_, DiagramRow>(&query)
+                    .bind(owner_id)
+                    .bind(project_id)
+                    .fetch_all(&self.pool)
+                    .await?
+            }
+        };
+
+        Ok(rows.into_iter().map(Diagram::from).collect())
+    }
+
+    async fn create_diagram(
+        &self,
+        owner_id: Uuid,
+        diagram: NewDiagram,
+    ) -> Result<Option<Diagram>, DomainError> {
+        let result = sqlx::query(
+            r#"
+            INSERT INTO diagrams (id, project_id, title, diagram_type, content)
+            SELECT $1, p.id, $3, $4, $5
+            FROM projects p
+            WHERE p.id = $2 AND p.owner_id = $6 AND p.deleted_at IS NULL
+            "#,
+        )
+        .bind(diagram.id)
+        .bind(diagram.project_id)
+        .bind(diagram.title)
+        .bind(diagram.diagram_type)
+        .bind(diagram.content)
+        .bind(owner_id)
+        .execute(&self.pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Ok(None);
+        }
+
+        self.get_diagram(owner_id, diagram.project_id, diagram.id).await
+    }
+
+    async fn get_diagram(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        diagram_id: Uuid,
+    ) -> Result<Option<Diagram>, DomainError> {
+        let query = format!(
+            "{DIAGRAM_SELECT}
+             WHERE p.owner_id = $1
+               AND p.id = $2
+               AND d.id = $3
+               AND p.deleted_at IS NULL"
+        );
+        let row = sqlx::query_as::<_, DiagramRow>(&query)
+            .bind(owner_id)
+            .bind(project_id)
+            .bind(diagram_id)
+            .fetch_optional(&self.pool)
+            .await?;
+        Ok(row.map(Diagram::from))
+    }
+
+    async fn update_diagram(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        diagram_id: Uuid,
+        changes: DiagramChanges,
+    ) -> Result<Option<Diagram>, DomainError> {
+        let current = match self.get_diagram(owner_id, project_id, diagram_id).await? {
+            Some(diag) => diag,
+            None => return Ok(None),
+        };
+
+        let new_title = changes.title.unwrap_or(current.title);
+        let new_content = changes.content.unwrap_or(current.content);
+
+        sqlx::query(
+            r#"
+            UPDATE diagrams
+            SET title = $1, content = $2, updated_at = NOW()
+            WHERE id = $3 AND project_id = $4
+            "#,
+        )
+        .bind(new_title)
+        .bind(new_content)
+        .bind(diagram_id)
+        .bind(project_id)
+        .execute(&self.pool)
+        .await?;
+
+        self.get_diagram(owner_id, project_id, diagram_id).await
+    }
+
+    async fn delete_diagram(
+        &self,
+        owner_id: Uuid,
+        project_id: Uuid,
+        diagram_id: Uuid,
+    ) -> Result<bool, DomainError> {
+        let result = sqlx::query(
+            r#"
+            DELETE FROM diagrams d
+            USING projects p
+            WHERE d.project_id = p.id
+              AND p.id = $1
+              AND p.owner_id = $2
+              AND d.id = $3
+              AND p.deleted_at IS NULL
+            "#,
+        )
+        .bind(project_id)
+        .bind(owner_id)
+        .bind(diagram_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(result.rows_affected() > 0)
+    }
+}
+
 
 

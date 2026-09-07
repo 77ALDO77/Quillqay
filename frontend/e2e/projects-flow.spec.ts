@@ -36,7 +36,9 @@ test.describe('Projects, Notes, Kanban and Diagrams Flow', () => {
     await expect(page.getByText(/Live/i)).toBeVisible(); // Realtime WebSocket indicator
   });
 
-  test('should navigate to diagrams and open the AntV X6 schema designer', async ({ page }) => {
+  test('should navigate to diagrams, create a new schema diagram and verify persistence', async ({ page }) => {
+    const schemaTitle = `E2E Schema ${Date.now()}`;
+
     // Open the first available project
     const openLink = page.getByRole('link', { name: /Open/i }).first();
     await openLink.click();
@@ -48,16 +50,82 @@ test.describe('Projects, Notes, Kanban and Diagrams Flow', () => {
     await diagramsLink.click();
     await page.waitForURL(/.*\/projects\/[a-f0-9-]+\/diagrams/);
 
-    // Verify Diagrams Hub loaded
-    await expect(page.getByText(/Database Schema/i).first()).toBeVisible();
+    // Click "New Diagram" button
+    const newDiagramBtn = page.getByRole('button', { name: /New Diagram/i }).first();
+    await newDiagramBtn.click();
 
-    // Open the Database Schema Designer
-    const dbCard = page.locator('a[href*="/diagrams/db"]').first();
-    await dbCard.click();
+    // Fill diagram title in modal
+    await page.getByPlaceholder(/e.g. Orders & Payments Schema/i).fill(schemaTitle);
+    
+    // Submit creation inside form modal
+    await page.locator('form').getByRole('button', { name: /Create Diagram/i }).click();
 
-    await page.waitForURL(/.*\/projects\/[a-f0-9-]+\/diagrams\/db/);
+    // Should navigate to the AntV X6 DB diagram editor
+    await page.waitForURL(/.*\/projects\/[a-f0-9-]+\/diagrams\/db\/[a-f0-9-]+/);
 
-    // Verify AntV X6 canvas loads without errors
-    await expect(page.locator('body')).not.toContainText('The request origin is not allowed');
+    // Verify Save button is visible and click it
+    const saveBtn = page.getByRole('button', { name: /Save/i }).first();
+    await expect(saveBtn).toBeVisible({ timeout: 10000 });
+    await saveBtn.click();
+
+    // Navigate back to Diagrams Hub
+    const backBtn = page.getByLabel(/Back to diagrams/i);
+    await backBtn.click();
+    await page.waitForURL(/.*\/projects\/[a-f0-9-]+\/diagrams/);
+
+    // Verify the newly created diagram is displayed in the list from PostgreSQL
+    await expect(page.getByText(schemaTitle)).toBeVisible({ timeout: 10000 });
+  });
+
+  test('should support multi-dialect SQL DDL import and render tables', async ({ page }) => {
+    // Open the first available project
+    const openLink = page.getByRole('link', { name: /Open/i }).first();
+    await openLink.click();
+    await page.waitForURL(/.*\/projects\/[a-f0-9-]+/);
+
+    // Navigate to Diagrams tab
+    const diagramsLink = page.locator('aside nav a[href*="/diagrams"]');
+    await diagramsLink.click();
+    await page.waitForURL(/.*\/projects\/[a-f0-9-]+\/diagrams/);
+
+    // Click "New Diagram" button
+    const newDiagramBtn = page.getByRole('button', { name: /New Diagram/i }).first();
+    await newDiagramBtn.click();
+
+    const importDiagramTitle = `Import DDL Test ${Date.now()}`;
+    await page.getByPlaceholder(/e.g. Orders & Payments Schema/i).fill(importDiagramTitle);
+    await page.locator('form').getByRole('button', { name: /Create Diagram/i }).click();
+
+    await page.waitForURL(/.*\/projects\/[a-f0-9-]+\/diagrams\/db\/[a-f0-9-]+/);
+
+    // Click "Import Schema" button in top toolbar
+    const importBtn = page.getByRole('button', { name: /Import Schema/i }).first();
+    await expect(importBtn).toBeVisible({ timeout: 10000 });
+    await importBtn.click();
+
+    // Verify modal elements in Step 1
+    await expect(page.getByText(/What is your Database\?/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /^PostgreSQL/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^MySQL/i })).toBeVisible();
+
+    // Select PostgreSQL and Continue
+    await page.getByRole('button', { name: /^PostgreSQL/i }).click();
+    await page.getByRole('button', { name: /Continue/i }).click();
+
+    // Step 2: Load Sample and Import
+    await page.getByRole('button', { name: /Load Sample/i }).click();
+
+    // Click Import
+    const doImportBtn = page.getByRole('button', { name: /Import PostgreSQL Schema/i });
+    await expect(doImportBtn).toBeVisible();
+    await doImportBtn.click();
+
+    // Verify modal closes and tables appear in sidebar
+    await expect(page.getByText(/users/i).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/profiles/i).first()).toBeVisible({ timeout: 10000 });
+
+    // Save diagram
+    const saveBtn = page.getByRole('button', { name: /Save/i }).first();
+    await saveBtn.click();
   });
 });

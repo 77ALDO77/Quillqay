@@ -23,8 +23,9 @@ mod domain;
 mod infrastructure;
 
 use application::{
-    auth::AuthService, documents::DocumentService, notes::NoteService, projects::ProjectService,
-    readiness::ReadinessService, storage_cleanup::StorageCleanupService, tasks::TaskService,
+    auth::AuthService, diagrams::DiagramService, documents::DocumentService, notes::NoteService,
+    projects::ProjectService, readiness::ReadinessService, storage_cleanup::StorageCleanupService,
+    tasks::TaskService,
 };
 use config::Config;
 use domain::storage::{ContentMetadata, ObjectStorage};
@@ -33,6 +34,9 @@ use infrastructure::{
     storage::s3::S3ObjectStorage,
     web::{
         auth::{login, logout, me},
+        diagrams::{
+            create_diagram, delete_diagram, get_diagram, list_diagrams, update_diagram,
+        },
         documents::{
             create_document, delete_document, get_document, get_revision, list_documents,
             list_revisions, restore_document, restore_revision, save_document_content,
@@ -62,6 +66,7 @@ pub struct AppState {
     pub document_service: DocumentService,
     pub note_service: NoteService,
     pub task_service: TaskService,
+    pub diagram_service: DiagramService,
     pub readiness_service: ReadinessService,
     pub storage: Arc<dyn ObjectStorage>,
     pub cookie: SessionCookieConfig,
@@ -132,6 +137,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let project_service = ProjectService::new(repository.clone());
     let note_service = NoteService::new(repository.clone());
     let task_service = TaskService::new(repository.clone());
+    let diagram_service = DiagramService::new(repository.clone());
     let document_service = DocumentService::new(
         repository.clone(),
         storage.clone(),
@@ -173,6 +179,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         document_service,
         note_service,
         task_service,
+        diagram_service,
         readiness_service,
         storage,
         cookie: SessionCookieConfig {
@@ -227,6 +234,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route(
             "/projects/:project_id/tasks/:task_id",
             patch(update_task).delete(delete_task),
+        )
+        .route(
+            "/projects/:project_id/diagrams",
+            get(list_diagrams).post(create_diagram),
+        )
+        .route(
+            "/projects/:project_id/diagrams/:diagram_id",
+            get(get_diagram)
+                .patch(update_diagram)
+                .delete(delete_diagram),
         )
         .route(
             "/projects/:project_id/documents",

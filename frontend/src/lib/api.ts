@@ -356,5 +356,73 @@ export function deleteTask(projectId: string, taskId: string): Promise<void> {
   });
 }
 
+export type DiagramType = 'db' | 'flowchart' | 'architecture' | 'whiteboard';
+
+export interface Diagram {
+  id: string;
+  projectId: string;
+  title: string;
+  diagramType: DiagramType;
+  content: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDiagramInput {
+  title: string;
+  diagramType: DiagramType;
+  content?: any;
+}
+
+export interface UpdateDiagramInput {
+  title?: string;
+  content?: any;
+}
+
+export function listDiagrams(
+  projectId: string,
+  diagramType?: string,
+): Promise<Diagram[]> {
+  const query = diagramType ? `?type=${encodeURIComponent(diagramType)}` : '';
+  return apiRequest(`/projects/${projectId}/diagrams${query}`);
+}
+
+export function createDiagram(
+  projectId: string,
+  input: CreateDiagramInput,
+): Promise<Diagram> {
+  return apiRequest(`/projects/${projectId}/diagrams`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function getDiagram(
+  projectId: string,
+  diagramId: string,
+): Promise<Diagram> {
+  return apiRequest(`/projects/${projectId}/diagrams/${diagramId}`);
+}
+
+export function updateDiagram(
+  projectId: string,
+  diagramId: string,
+  input: UpdateDiagramInput,
+): Promise<Diagram> {
+  return apiRequest(`/projects/${projectId}/diagrams/${diagramId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteDiagram(
+  projectId: string,
+  diagramId: string,
+): Promise<void> {
+  return apiRequest(`/projects/${projectId}/diagrams/${diagramId}`, {
+    method: 'DELETE',
+  });
+}
+
 
 

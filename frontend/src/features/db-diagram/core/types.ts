@@ -23,3 +23,10 @@ export interface RelationshipDef {
   targetTable: string;
   targetField: string;
 }
+
+export type SqlDialect = 'postgres' | 'mysql' | 'mariadb' | 'sqlite' | 'sqlserver' | 'oracle';
+
+export interface ParsedSchemaResult {
+  tables: TableDef[];
+  relationships: RelationshipDef[];
+}

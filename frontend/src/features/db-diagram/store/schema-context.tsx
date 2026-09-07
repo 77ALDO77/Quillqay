@@ -7,6 +7,8 @@ interface SchemaContextValue {
   tables: TableDef[];
   relationships: RelationshipDef[];
   setAllTables: (tables: TableDef[]) => void;
+  setRelationships: React.Dispatch<React.SetStateAction<RelationshipDef[]>>;
+  setTablesAndRelationships: (tables: TableDef[], relationships: RelationshipDef[]) => void;
   updateTable: (index: number, table: TableDef) => void;
   addTable: (name?: string) => void;
   removeTable: (index: number) => void;
@@ -104,11 +106,18 @@ export function SchemaProvider({ tables, onTablesChange, children }: SchemaProvi
     setRelationships((prev) => prev.filter((r) => r.id !== id));
   }, []);
 
+  const setTablesAndRelationships = useCallback((newTables: TableDef[], newRels: RelationshipDef[]) => {
+    onTablesChange(newTables);
+    setRelationships(newRels);
+  }, [onTablesChange]);
+
   return (
     <SchemaContext.Provider value={{
       tables,
       relationships,
       setAllTables: onTablesChange,
+      setRelationships,
+      setTablesAndRelationships,
       updateTable,
       addTable,
       removeTable,
